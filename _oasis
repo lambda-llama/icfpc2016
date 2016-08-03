@@ -1,0 +1,21 @@
+OASISFormat:    0.4
+OCamlVersion:   >= 4.03.0
+Name:           icfpc
+Version:        2016
+Synopsis:       λ-llama submission for ICFP contest 2016
+Authors:        Sergei Lebedev <superbobry@gmail.com>
+License:        MIT
+BuildTools:     ocamlbuild
+BuildDepends:   core_kernel
+
+Library some_library
+  Path:               src
+  BuildDepends:       ppx_deriving.std
+  Modules:            Types
+  CompiledObject:     best
+
+Executable some_binary
+  Path:               bin
+  BuildDepends:       some_library
+  MainIs:             main.ml
+  CompiledObject:     best
