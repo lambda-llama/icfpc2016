@@ -7,7 +7,6 @@ import sys
 import numpy as np
 from scipy.spatial import ConvexHull
 import functools
-from math import atan
 
 
 def parse_vertex(s):
@@ -94,14 +93,6 @@ def check_boundary(edge, point1, point2):
     return result
 
 
-def compare_cos(center, point1, point2):
-    x1 = point1[0] - center[0]
-    y1 = point1[1] - center[1]
-    x2 = point2[0] - center[0]
-    y2 = point2[1] - center[1]
-    return x1 * y2 - x2 * y1
-
-
 def fold(convex):
     """
     Basic IDEA:
@@ -115,39 +106,29 @@ def fold(convex):
     convex_center = [sum(map(lambda v: v[0], convex)) / len(convex), sum(map(lambda v: v[1], convex)) / len(convex)]
     print("Convex center", convex_center)
     print("Square", square(convex))
-    ws = [[0, 0], [1, 1], [0, 1], [1, 0]]
+    ws = [[0, 0], [0, 1], [1, 1], [1, 0]]
     i = 0
     size = len(convex)
-    print("Convex size", size)
+    delta = square(ws) - square(convex)
 
-    def compare(x, y):
-        return compare_cos(convex_center, x, y)
-
-    ws = sorted(ws, key=functools.cmp_to_key(compare))
-    no_progress = 0
-
-    while True:
+    while abs(delta) > 1e-3:
         i += 1
-        if i > size * 3:
-            print("Max operations threshold exceeded. Stop.")
+        if i > 50:
             break
 
         print("Iteration", i)
         print("WS", ws)
+        print("Delta", delta)
         edge = (convex[i % size], convex[(i + 1) % size])
         print("Try edge", i % size, edge)
 
         ws_len = len(ws)
         i_to_process = [v for v in range(ws_len) if check_boundary(edge, ws[v], convex_center)]
-
-        print("No progress", no_progress)
         if len(i_to_process) == 0:
-            no_progress += 1
-            if no_progress > size:
-                print("No progress for", no_progress, "steps. Stop.")
-                break
             continue
-        no_progress = 0
+
+        points_else = [ws[i] for i in range(ws_len) if i not in i_to_process]
+        print("Points to stay", points_else)
 
         points_to_mirror = [ws[i] for i in i_to_process]
         print("Points to mirror", points_to_mirror)
@@ -161,20 +142,17 @@ def fold(convex):
         ws_next_edge = [ws[(i_max + 1) % ws_len], ws[i_max]]
         print("Prev edge to intersect", ws_prev_edge)
         print("Next edge to intersect", ws_next_edge)
-        intersection1 = line_intersection(edge, ws_prev_edge)
-        intersection2 = line_intersection(edge, ws_next_edge)
-        point_intersections = []
-        if len(intersection1) == 2:
-            point_intersections.append(intersection1)
-        if len(intersection2) == 2:
-            point_intersections.append(intersection2)
+        try:
+            point_intersection = [line_intersection(edge, ws_prev_edge), line_intersection(edge, ws_next_edge)]
+        except:
+            pass
+        print("Intersections", point_intersection)
 
-        print("Intersections", point_intersections)
-        points_else = [ws[i] for i in range(ws_len) if i not in i_to_process]
-        print("Else points", points_else)
-        ws = remove_duplicates(sorted(points_else + mirrored + point_intersections, key=functools.cmp_to_key(compare)))
-
-    print("Result found in", i, "iterations", "approximation", ws)
+        ws_new = np.array(points_else + mirrored + point_intersection)
+        hull = ConvexHull(ws_new)
+        ws = remove_duplicates(ws_new[hull.vertices].tolist())
+        delta = square(ws) - square(convex)
+    print("Result found in", i, "iterations", "delta", delta, "approximation", ws)
 
 
 def remove_duplicates(ws_new):
@@ -206,7 +184,7 @@ def line_intersection(line1, line2):
 
     div = det(dx, dy)
     if div == 0:
-        return []
+        raise Exception('lines do not intersect')
 
     d = (det(*line1), det(*line2))
     x = det(d, dx) / div
@@ -223,4 +201,4 @@ if __name__ == "__main__":
     points = np.array([[v[0], v[1]] for p in polygons for v in p])
     hull = ConvexHull(polygons[0])
     convex_points = points[hull.vertices]
-    fold(convex_points.tolist())
+    fold(convex_points)
