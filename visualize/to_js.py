@@ -164,22 +164,27 @@ def fold(convex):
         intersection1 = line_intersection(edge, ws_prev_edge)
         intersection2 = line_intersection(edge, ws_next_edge)
         point_intersections = []
-        if (len(intersection1) == 2):
+        if len(intersection1) == 2:
             point_intersections.append(intersection1)
-        if (len(intersection2) == 2):
+        if len(intersection2) == 2:
             point_intersections.append(intersection2)
+
         print("Intersections", point_intersections)
         points_else = [ws[i] for i in range(ws_len) if i not in i_to_process]
         print("Else points", points_else)
-        ws_new = sorted(points_else + mirrored + point_intersections, key=functools.cmp_to_key(compare))
-        ws = []
-        p = [-1000, 1000]
-        for i in range(len(ws_new)):
-            if abs(p[0] - ws_new[i][0]) > 1e-3 or abs(p[1] - ws_new[i][1]) > 1e-3:
-                ws.append(ws_new[i])
-                p = ws_new[i]
+        ws = remove_duplicates(sorted(points_else + mirrored + point_intersections, key=functools.cmp_to_key(compare)))
 
     print("Result found in", i, "iterations", "approximation", ws)
+
+
+def remove_duplicates(ws_new):
+    ws = []
+    p = [-1000, 1000]
+    for i in range(len(ws_new)):
+        if abs(p[0] - ws_new[i][0]) > 1e-3 or abs(p[1] - ws_new[i][1]) > 1e-3:
+            ws.append(ws_new[i])
+            p = ws_new[i]
+    return ws
 
 
 def mirror(p_x, p_y, x0, y0, x1, y1):
