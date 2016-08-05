@@ -77,12 +77,12 @@ module Facet = struct
 
   let rec fix (f: t): t =
     let merge_segments (a, b) (b', c) =
-      assert (b = b');
+      assert (Vertex.eq b b');
       let open Vertex in
       let v1 = sub b a in
       let v2 = sub b' c in
       let d = dot v1 v2 in
-      if d */ d = norm v1 */ norm v2 then Some (a, c) else None
+      if d */ d =/ norm v1 */ norm v2 then Some (a, c) else None
     in match f with
     | []  -> []
     | [x] -> [x]
@@ -303,9 +303,7 @@ module Figure = struct
     and lower_triangle: Facet.t = [(a, c); (c, d); (d, a)] in
 
     let f: t = [upper_triangle; lower_triangle] in begin
-      assert (unfold f (c, d) = Some [
-          [(e, d); (d, a); (a, b); (b, c); (c, e) ]
-        ])
+      assert (unfold f (c, d) = Some [[(e, a); (a, b); (b, c); (c, e)]])
     end
 
   let area = List.fold_left ~init:(n 0)
