@@ -6,13 +6,13 @@
 
 
 ```
-$ opam install core_kernel ppx_deriving
+$ opam install core_kernel ppx_deriving oasis
 $ ocaml setup.ml -all
 ```
 
 ## Running the visualizer
 
 ```bash
-$ cd visualizer
+$ cd visualize
 $ python -m http.server
 ```
