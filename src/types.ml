@@ -87,6 +87,31 @@ module Facet = struct
       then failwith ("Facet.merge: no common segments" ^ debug)
       else failwith ("Facet.merge: >1 common segments" ^ debug)
 
+  let rec fix (f: t): t =
+    let merge_segments (a, b) (b', c) =
+      assert (b = b');
+      let open Vertex in
+      let v1 = sub b a in
+      let v2 = sub b' c in
+      let d = dot v1 v2 in
+      if d */ d = norm v1 */ norm v2 then Some (a, c) else None
+    in
+    match f with
+    | [] -> []
+    | [x] -> [x]
+    | x::y::xs -> match merge_segments x y with
+      | None -> x::fix (y::xs)
+      | Some z -> z::fix xs
+
+  let () as _test_fix =
+    let a = (n 0, n 0) in
+    let b = (n 1, n 0) in
+    let c = (n 2, n 0) in
+    let d = (n 1, n 1) in
+    let f = [(a, b); (b, c); (c, d); (d, a)] in
+    assert (fix f = [(a, c); (c, d); (d, a)])
+
+
   let () as _test_merge =
     let a = (n 0, n 0)
     and b = (n 0, n 1)
