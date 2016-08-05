@@ -10,6 +10,8 @@ type coord = num [@printer fun fmt n -> fprintf fmt "%s" (string_of_num n)]
 module Vertex = struct
   type t = coord * coord [@@deriving show]
 
+  let eq (x1, y1) (x2, y2) = eq_num x1 x2 && eq_num y1 y2
+
   let sub (x1, y1) (x2, y2) = (x1 -/ x2, y1 -/ y2)
 
   let dot (x1, y1) (x2, y2) = x1 */ x2 +/ y1 */ y2
@@ -33,13 +35,18 @@ module Vertex = struct
   end
 end
 
-type segment = Vertex.t * Vertex.t
 
-and poly = Vertex.t list
+module Segment = struct
+  type t = Vertex.t * Vertex.t [@@deriving show]
+
+  let eq (a, b) (c, d) = Vertex.eq a c && Vertex.eq b d
+end
+
+type poly = Vertex.t list
 
 and silhouette = poly list
 
-and skeleton = segment list
+and skeleton = Segment.t list
 
 and problem = silhouette * skeleton
 [@@deriving show]
@@ -51,7 +58,7 @@ let sort_cc =
 
 
 module Facet = struct
-  type t = segment list [@@deriving show]
+  type t = Segment.t list [@@deriving show]
 
   (* XXX possibly duplicated. *)
   let _vertices f = List.concat_map f ~f:(fun (a, b) -> [a; b])
@@ -80,7 +87,7 @@ module Facet = struct
 
   let next_cc_segment in_seg out_segs =
     let angle (s1, e1) (s2, e2) =
-      assert (e1 = s2);
+      assert (Vertex.eq e1 s2);
       let (x1, y1) = Vertex.sub s1 e1 in (* opposite direction *)
       let (x2, y2) = Vertex.sub e2 s2 in
       let f = float_of_num in
@@ -90,19 +97,18 @@ module Facet = struct
     in
     Option.value_exn (List.max_elt out_segs ~cmp:(fun x y -> if angle in_seg x < angle in_seg y then -1 else 1))
 
-
   let of_skeleton (s: skeleton) : t list =
     let half_edges = ref (List.concat_map s ~f:(fun (a, b) -> [(a, b); (b, a)])) in
     let segmap = Hashtbl.Poly.create () in
-    let poly_of_segment (start: segment) : segment list =
+    let poly_of_segment (start: Segment.t) : Segment.t list =
       let next s =
         Hashtbl.Poly.find_exn segmap (snd s)
-        |> List.filter ~f:(fun (a, b) -> (b, a) <> s)
+        |> List.filter ~f:(fun (a, b) -> not (Segment.eq (b, a) s))
         |> next_cc_segment s
       in let rec go work =
            let n = next (List.hd_exn work) in
            assert (n <> List.hd_exn work);
-           if n = start then work else go (n :: work)
+           if Segment.eq n start then work else go (n :: work)
 
       in go [start]
     in
@@ -117,7 +123,8 @@ module Facet = struct
         let next = List.hd_exn !half_edges in
         let facet = poly_of_segment next in
         begin
-          half_edges := List.filter !half_edges ~f:(fun e -> List.for_all facet ~f:(fun ee -> e <> ee));
+          half_edges := List.filter !half_edges
+              ~f:(fun e -> List.for_all facet ~f:(fun ee -> not (Segment.eq e ee)));
           result := facet :: !result
         end
       done;
@@ -145,7 +152,7 @@ module Facet = struct
 
   let () =
     let n = num_of_int in
-    let h = div_num (n 1) ( n 2) in
+    let h = div_num (n 1) (n 2) in
     let a = (n 0, n 0) in
     let b = (n 1, n 0) in
     let c = (h, h) in
