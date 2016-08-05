@@ -4,6 +4,9 @@
 
 import re
 import sys
+import numpy as np
+from scipy.spatial import ConvexHull
+
 
 def parse_vertex(s):
     if "/" in s:
@@ -63,7 +66,35 @@ def parse(lines):
     return [rescaled_polygons, [], rescaled_skeletons]
 
 
-lines = sys.stdin.readlines()
-print("Lines\n", "".join(lines), file=sys.stderr)
-silhouette = parse(lines)
-print(str(silhouette))
+def square(convex):
+    s = 0
+    ps = len(convex)
+    for i in range(0, ps):
+        s += convex[i][0] * convex[(i + 1) % ps][1] - convex[i][1] * convex[(i + 1) % ps][0]
+    return abs(s / 2)
+
+
+def fold(convex):
+    """
+    Basic IDEA:
+    All the loaded problems are already shifted to fit 1x1 square.
+    LET Working set = 4 square points
+    Iteratively for each edge in target convex check if any of the points from Working set is in another semiplane.
+    If there is one, let fold, update Working set.
+    Iterate while we can. As a result we get number of lines.
+    """
+    print("Square", square(convex))
+
+
+if __name__ == "__main__":
+    lines = sys.stdin.readlines()
+    print("Lines\n", "".join(lines), file=sys.stderr)
+    silhouette = parse(lines)
+    print(str(silhouette))
+    (polygons, _, _) = silhouette
+    points = np.array([[v[0], v[1]] for p in polygons for v in p])
+    hull = ConvexHull(polygons[0])
+    convex_points = points[hull.vertices]
+    print("Convex hull", convex_points)
+    fold(convex_points)
+
