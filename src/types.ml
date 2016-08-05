@@ -264,7 +264,8 @@ module Figure = struct
     let is_orthogonal (x1, y1) (x2, y2) =
       (x2 */ x1) +/ (y2 */ y1) = n 0
     in match f with
-    | [[(a, d); (_d, c); (_c, b); (_b, _a)]] ->
+    | [[(a, d); (d', c); (c', b); (b', _a)]] ->
+      assert (d = d' && c = c' && b = b');
       is_orthogonal (Vertex.sub d a) (Vertex.sub c d) &&
       is_orthogonal (Vertex.sub c b) (Vertex.sub a b)
     | _other -> false
