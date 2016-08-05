@@ -13,7 +13,9 @@ Library origami
   Path:               src
   BuildDepends:       ppx_deriving.std
   Modules:            Types,
-                      Input
+                      Input,
+                      Output,
+                      Engine
   CompiledObject:     best
 
 Executable folder

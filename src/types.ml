@@ -81,7 +81,8 @@ module Facet = struct
       let (l1, r1) = split_on_edge f on
       and (l2, r2) = split_on_edge other (Segment.twin on) in
       List.concat [l1; r2; l2; r1]
-    | _other -> failwith "Facet.merge"
+    | [] -> failwith "Facet.merge: no common segments"
+    | _other -> failwith "Facet.merge: >1 common segments"
 
   let () as _test_merge =
     let a = (n 0, n 0)
@@ -116,6 +117,11 @@ module Facet = struct
           ((n 2, n 0), d); (d, c); (c, (n 2, n 1)); ((n 2, n 1), (n 2, n 0))
         ])
     end
+end
+
+
+module Figure = struct
+  type t = Facet.t list [@@deriving show]
 
   let next_cc_segment in_seg out_segs =
     let angle (s1, e1) (s2, e2) =
@@ -139,7 +145,7 @@ module Facet = struct
       and hash = Hashtbl.hash
     end)
 
-  let of_skeleton (s: skeleton) : t list =
+  let of_skeleton (s: skeleton) : t =
     let half_edges = ref (List.concat_map s ~f:(fun (a, b) -> [(a, b); (b, a)])) in
     let segmap = SegmentMap.create () in
     let poly_of_segment (start: Segment.t) : Segment.t list =
@@ -170,7 +176,7 @@ module Facet = struct
           result := facet :: !result
         end
       done;
-      !result
+      List.filter !result ~f:(fun f -> Facet.area f >/ n 0)
     end
 
   let () =
@@ -208,11 +214,6 @@ module Facet = struct
       ] in
     let facets = of_skeleton skel in
     ()
-end
-
-
-module Figure = struct
-  type t = Facet.t list [@@deriving show]
 
   let vertices f =
     let result = List.concat_map f
