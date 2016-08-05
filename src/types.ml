@@ -59,12 +59,6 @@ and skeleton = Segment.t list
 and problem = silhouette * skeleton
 [@@deriving show]
 
-(** Sort vertices in counter-clockwise order. *)
-let sort_cc =
-  let angle (x, y) = atan (float_of_num (div_num y x)) in
-  List.sort ~cmp:(fun v1 v2 -> compare (angle v1) (angle v2))
-
-
 module Facet = struct
   type t = Segment.t list [@@deriving show]
 
@@ -191,13 +185,12 @@ module Figure = struct
     let poly_of_segment (start: Segment.t) : Segment.t list =
       let next s =
         SegmentMap.find_exn segmap (snd s)
-        |> List.filter ~f:(fun (a, b) -> not (Segment.eq (b, a) s))
+        |> List.filter ~f:(fun (a, b) -> Segment.neq (b, a) s)
         |> next_cc_segment s
       in let rec go work =
            let n = next (List.hd_exn work) in
            assert (n <> List.hd_exn work);
            if Segment.eq n start then work else go (n :: work)
-
       in go [start]
     in
     let result = ref [] in
@@ -254,11 +247,6 @@ module Figure = struct
       ] in
     let facets = of_skeleton skel in
     ()
-
-  let vertices f =
-    let result = List.concat_map f
-        ~f:(List.concat_map ~f:(fun (a, b) -> [a; b]))
-    in result |> List.dedup |> sort_cc
 
   let segments f = List.concat f |> List.dedup
 
