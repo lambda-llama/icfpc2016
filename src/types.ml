@@ -81,8 +81,11 @@ module Facet = struct
       let (l1, r1) = split_on_edge f on
       and (l2, r2) = split_on_edge other (Segment.twin on) in
       List.concat [l1; r2; l2; r1]
-    | [] -> failwith "Facet.merge: no common segments"
-    | _other -> failwith "Facet.merge: >1 common segments"
+    | _other ->
+      let debug = sprintf "\n%s\n%s" (show f) (show other) in
+      if common = []
+      then failwith ("Facet.merge: no common segments" ^ debug)
+      else failwith ("Facet.merge: >1 common segments" ^ debug)
 
   let () as _test_merge =
     let a = (n 0, n 0)
