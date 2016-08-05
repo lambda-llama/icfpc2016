@@ -189,8 +189,7 @@ module Facet = struct
         (a, c);
       ] in
     let facets = of_skeleton skel in
-    List.iter facets ~f:(fun f -> print_endline @@ show f);
-    print_endline "Done!"
+    ()
 end
 
 
@@ -213,9 +212,9 @@ module Figure = struct
             Facet.intersects other target)
         in
 
-        print_newline ();
-        printf ">>> target = %s\n" (Facet.show target);
-        List.iter neigbours ~f:(fun n -> printf ">>> neigbour = %s\n" (Facet.show n));
+        (* print_newline (); *)
+        (* printf ">>> target = %s\n" (Facet.show target); *)
+        (* List.iter neigbours ~f:(fun n -> printf ">>> neigbour = %s\n" (Facet.show n)); *)
 
         (* Remove segements common with [target] from neighbours. *)
         let skeleton = List.map neigbours
@@ -223,9 +222,9 @@ module Figure = struct
                 not @@ List.mem ~equal:Segment.eq_unordered target s))
         in
 
-        List.iter skeleton ~f:(fun n ->
-            printf "\n-----\n";
-            List.iter n ~f:(fun x -> printf ">>> segment = %s\n" (Segment.show x)));
+        (* List.iter skeleton ~f:(fun n -> *)
+        (*     printf "\n-----\n"; *)
+        (*     List.iter n ~f:(fun x -> printf ">>> segment = %s\n" (Segment.show x))); *)
 
         (* Remove the segment used for reflection from the result. *)
         let reflected =
@@ -248,7 +247,7 @@ module Figure = struct
     and lower_triangle: Facet.t = [(a, c); (c, d); (d, a)] in
 
     let f: t = [upper_triangle; lower_triangle] in
-    print_endline @@ show (Option.value_exn (unfold f (c, d)))
+    ()
 
   let area = List.fold_left ~init:(num_of_int 0)
       ~f:(fun acc f -> acc +/ Facet.area f)
