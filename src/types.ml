@@ -264,8 +264,10 @@ module Figure = struct
 
   (** Unfolds a given segment [s] of a figure [f]. *)
   let unfold f s =
-    List.find f ~f:(fun target -> List.mem ~equal:Segment.eq target s)
-    |> Option.map ~f:(fun target ->
+    let targets = List.filter f
+        ~f:(fun target -> List.mem ~equal:Segment.eq target s)
+    in match targets with
+    | [target] ->
         let neigbours = List.filter f ~f:(fun other ->
             not (phys_equal other target) &&
             Facet.intersects other target)
@@ -279,7 +281,8 @@ module Figure = struct
         let remaining = List.filter f ~f:(fun other ->
             not (List.mem ~equal:phys_equal neigbours other ||
                  phys_equal other target))
-        in replacement::remaining)
+        in Some (replacement::remaining)
+    | _other -> None  (* 0 or >1 *)
 
   let () as _unfold_test =
     let a = (n 0, n 0)
