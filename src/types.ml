@@ -40,6 +40,9 @@ module Segment = struct
   type t = Vertex.t * Vertex.t [@@deriving show]
 
   let eq (a, b) (c, d) = Vertex.eq a c && Vertex.eq b d
+  let eq_unordered (a, b) (c, d) =
+    (Vertex.eq a c && Vertex.eq b d) ||
+    (Vertex.eq a d && Vertex.eq b c)
 end
 
 type poly = Vertex.t list
@@ -63,7 +66,8 @@ module Facet = struct
   (* XXX possibly duplicated. *)
   let _vertices f = List.concat_map f ~f:(fun (a, b) -> [a; b])
 
-  let intersects f other = List.for_all f ~f:(List.mem other)
+  let intersects (f: t) (other: t) =
+    List.exists f ~f:(List.mem ~equal:Segment.eq_unordered other)
 
   (* http://mathworld.wolfram.com/PolygonArea.html *)
   let area f =
@@ -182,22 +186,30 @@ module Figure = struct
 
   (** Unfolds a given segment [s] of a figure [f]. *)
   let unfold f s =
-    List.find f ~f:(fun target -> List.mem target s)
+    List.find f ~f:(fun target -> List.mem ~equal:Segment.eq target s)
     |> Option.map ~f:(fun target ->
         let neigbours = List.filter f ~f:(fun other ->
             not (phys_equal other target) &&
-            Facet.intersects target other)
+            Facet.intersects other target)
         in
+
+        print_newline ();
+        printf ">>> target = %s\n" (Facet.show target);
+        List.iter neigbours ~f:(fun n -> printf ">>> neigbour = %s\n" (Facet.show n));
 
         (* Remove segements common with [target] from neighbours. *)
         let skeleton = List.map neigbours
-            ~f:(List.filter
-                  ~f:(fun s -> not @@ List.mem ~equal:phys_equal target s))
+            ~f:(List.filter ~f:(fun s ->
+                not @@ List.mem ~equal:Segment.eq_unordered target s))
         in
+
+        List.iter skeleton ~f:(fun n ->
+            printf "\n-----\n";
+            List.iter n ~f:(fun x -> printf ">>> segment = %s\n" (Segment.show x)));
 
         (* Remove the segment used for reflection from the result. *)
         let reflected =
-          Facet.reflect target s |> List.filter ~f:((phys_equal s))
+          Facet.reflect target s |> List.filter ~f:(Segment.eq s)
         in
 
         let replacement = List.concat_no_order (reflected::skeleton) in
@@ -206,16 +218,14 @@ module Figure = struct
             phys_equal other target)
         in replacement::remaining)  (* TODO: SORT! *)
 
-  let () =
+  let () as _unfold_test =
     let a = (n 0, n 0)
-    and b = (n 1, n 0)
+    and b = (n 0, n 1)
     and c = (n 1, n 1)
-    and d = (n 0, n 1)
-    in
+    and d = (n 1, n 0) in
 
-    let upper_triangle: Facet.t = [(a, b); (b, c); (c, d)]
-    and lower_triangle: Facet.t = [(a, c); (c, d); (d, a)]
-    in
+    let upper_triangle: Facet.t = [(a, b); (b, c); (c, a)]
+    and lower_triangle: Facet.t = [(a, c); (c, d); (d, a)] in
 
     let f: t = [upper_triangle; lower_triangle] in
     print_endline @@ show (Option.value_exn (unfold f (c, d)))
