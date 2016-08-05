@@ -128,7 +128,7 @@ def fold(convex):
 
     while True:
         i += 1
-        if i > size * 5:
+        if i > size * 3:
             print("Max operations threshold exceeded. Stop.")
             break
 
@@ -161,11 +161,17 @@ def fold(convex):
         ws_next_edge = [ws[(i_max + 1) % ws_len], ws[i_max]]
         print("Prev edge to intersect", ws_prev_edge)
         print("Next edge to intersect", ws_next_edge)
-        point_intersection = [line_intersection(edge, ws_prev_edge), line_intersection(edge, ws_next_edge)]
-        print("Intersections", point_intersection)
+        intersection1 = line_intersection(edge, ws_prev_edge)
+        intersection2 = line_intersection(edge, ws_next_edge)
+        point_intersections = []
+        if (len(intersection1) == 2):
+            point_intersections.append(intersection1)
+        if (len(intersection2) == 2):
+            point_intersections.append(intersection2)
+        print("Intersections", point_intersections)
         points_else = [ws[i] for i in range(ws_len) if i not in i_to_process]
         print("Else points", points_else)
-        ws_new = sorted(points_else + mirrored + point_intersection, key=functools.cmp_to_key(compare))
+        ws_new = sorted(points_else + mirrored + point_intersections, key=functools.cmp_to_key(compare))
         ws = []
         p = [-1000, 1000]
         for i in range(len(ws_new)):
@@ -195,7 +201,7 @@ def line_intersection(line1, line2):
 
     div = det(dx, dy)
     if div == 0:
-        raise Exception('lines do not intersect')
+        return []
 
     d = (det(*line1), det(*line2))
     x = det(d, dx) / div
