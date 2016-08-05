@@ -62,7 +62,32 @@ and problem = silhouette * skeleton
 module Facet = struct
   type t = Segment.t list [@@deriving show]
 
+  (** Checks that all facet segments are consecutive. *)
+  let rec is_proper = function
+  | [] | [_] -> true
+  | (_a, b)::(((c, _d)::_) as rest) ->
+    Vertex.eq b c && is_proper rest
+
+  let rec fix (f: t): t =
+    let merge_segments (a, b) (b', c) =
+      assert (b = b');
+      let open Vertex in
+      let v1 = sub b a in
+      let v2 = sub b' c in
+      let d = dot v1 v2 in
+      if d */ d = norm v1 */ norm v2 then Some (a, c) else None
+    in match f with
+    | []  -> []
+    | [x] -> [x]
+    | x::y::rest -> begin match merge_segments x y with
+      | Some z -> z::fix rest
+      | None   -> x::fix (y::rest)
+      end
+
   let merge (f: t) (other: t): t =
+    assert (is_proper f);
+    assert (is_proper other);
+
     let split_on_edge f on =
       let (l, r) = List.split_while f ~f:(Segment.neq on) in
       (l, List.tl_exn r)
@@ -74,28 +99,12 @@ module Facet = struct
     | [on] ->
       let (l1, r1) = split_on_edge f on
       and (l2, r2) = split_on_edge other (Segment.twin on) in
-      List.concat [l1; r2; l2; r1]
+      fix (List.concat [l1; r2; l2; r1])
     | _other ->
       let debug = sprintf "\n%s\n%s" (show f) (show other) in
       if common = []
       then failwith ("Facet.merge: no common segments" ^ debug)
       else failwith ("Facet.merge: >1 common segments" ^ debug)
-
-  let rec fix (f: t): t =
-    let merge_segments (a, b) (b', c) =
-      assert (b = b');
-      let open Vertex in
-      let v1 = sub b a in
-      let v2 = sub b' c in
-      let d = dot v1 v2 in
-      if d */ d = norm v1 */ norm v2 then Some (a, c) else None
-    in
-    match f with
-    | [] -> []
-    | [x] -> [x]
-    | x::y::xs -> match merge_segments x y with
-      | None -> x::fix (y::xs)
-      | Some z -> z::fix xs
 
   let () as _test_fix =
     let a = (n 0, n 0) in
@@ -117,15 +126,10 @@ module Facet = struct
       assert (merge [(a, c); (c, b); (b, a)] [(a, d); (d, c); (c, a)] = [
           (a, d); (d, c); (c, b); (b, a);
         ]);
-
-      let deleteme = merge
-                [(a, d); (d, c); (c, b); (b, a)]
-                [(b, c); (c, f); (f, e); (e, b)]
-      in print_endline (show deleteme);
       assert (merge
                 [(a, d); (d, c); (c, b); (b, a)]
                 [(b, c); (c, f); (f, e); (e, b)] = [
-          (a, d); (d, c); (c, b); (b, a);
+          (a, d); (d, f); (f, e); (e, a);
         ])
     end
 
@@ -209,6 +213,7 @@ module Figure = struct
           result := facet :: !result
         end
       done;
+      assert (List.for_all !result ~f:Facet.is_proper);
       List.filter !result ~f:(fun f -> Facet.area f >/ n 0)
     end
 
