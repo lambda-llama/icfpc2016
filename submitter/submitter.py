@@ -3,9 +3,7 @@ import sys
 import requests
 
 
-if __name__ == '__main__':
-    _, problem_id, file = sys.argv
-    print(problem_id, file)
+def submit(problem_id, file):
     headers = {
         "X-API-Key": "179-c628d31b740634928666a1515aeb12a2"
     }
@@ -18,4 +16,9 @@ if __name__ == '__main__':
         resp = requests.post(
             api_url, headers=headers, files=files
         )
-    print(resp.text)
+    return resp
+
+
+if __name__ == '__main__':
+    _, problem_id, file = sys.argv
+    print(submit(problem_id, file).text)
