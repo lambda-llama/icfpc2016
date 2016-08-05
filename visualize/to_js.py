@@ -14,40 +14,31 @@ def parse_vertex(s):
 
 
 def to_js(lines):
-    result = "[\n"
-    polygons = int(lines[0])
-    print("Polygons", polygons, file=sys.stderr)
+    polygons_number = int(lines[0])
+    polygons = []
+    print("Polygons nubmer", polygons_number, file=sys.stderr)
     cursor = 1
-    result += "["
-    for p in range(polygons):
-        if p > 0:
-            result += "\n, "
-        result += "["
+    for p in range(polygons_number):
+        polygon = []
         vertices = int(lines[cursor])
         print("Polygon {0} Vertices {1}".format(p, vertices), file=sys.stderr)
         cursor += 1
-
         for v in range(vertices):
-            if v > 0:
-                result += ", "
             line = lines[cursor]
             cursor += 1
             coords = re.split("[ ,]", line)
             print("Vertex {0} Coords: {1}".format(v, coords), file=sys.stderr)
             x = parse_vertex(coords[0])
             y = parse_vertex(coords[1])
-            result += "[{0}, {1}]".format(x, y)
-        result += "]"
+            polygon.append([x, y])
+        polygons.append(polygon)
 
-    result += "],\n[],\n["  # Splitter between polygons and skeleton
-
-    skeletons = int(lines[cursor])
-    print("Skeletons", skeletons, file=sys.stderr)
+    skeletons_number = int(lines[cursor])
+    skeletons = []
+    print("Skeletons", skeletons_number, file=sys.stderr)
     cursor += 1
 
-    for s in range(skeletons):
-        if s > 0:
-            result += ", "
+    for s in range(skeletons_number):
         line = lines[cursor]
         cursor += 1
         coords = re.split("[ ,]", line)
@@ -56,10 +47,9 @@ def to_js(lines):
         y1 = parse_vertex(coords[1])
         x2 = parse_vertex(coords[2])
         y2 = parse_vertex(coords[3])
-        result += "[[ {0}, {1}], [{2}, {3}]]".format(x1, y1, x2, y2)
-    result += "]\n]"
+        skeletons.append([[x1, y1], [x2, y2]])
 
-    return result
+    return str([polygons, [], skeletons])
 
 
 lines = sys.stdin.readlines()
