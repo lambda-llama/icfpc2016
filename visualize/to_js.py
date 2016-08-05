@@ -5,7 +5,6 @@
 import re
 import sys
 
-
 def parse_vertex(s):
     if "/" in s:
         return float(s.split("/")[0]) / int(s.split("/")[1])
@@ -13,7 +12,7 @@ def parse_vertex(s):
         return float(s)
 
 
-def to_js(lines):
+def parse(lines):
     polygons_number = int(lines[0])
     polygons = []
     print("Polygons nubmer", polygons_number, file=sys.stderr)
@@ -61,9 +60,10 @@ def to_js(lines):
                               [e[1][0] - min_x, e[1][1] - min_y]]
                           for e in skeletons]
 
-    return str([rescaled_polygons, [], rescaled_skeletons])
+    return [rescaled_polygons, [], rescaled_skeletons]
 
 
 lines = sys.stdin.readlines()
 print("Lines\n", "".join(lines), file=sys.stderr)
-print(to_js(lines))
+silhouette = parse(lines)
+print(str(silhouette))
