@@ -97,16 +97,19 @@ def fold(convex):
     Basic IDEA:
     All the loaded problems are already shifted to fit 1x1 square.
     LET Working set = 4 square points
-    Iteratively for each edge in target convex check if any of the points from Working set is in another semiplane.
+    Iteratively for each edge in target convex check if any of the points from Working set is in another semi plane.
     If there is one, let fold, update Working set.
     Iterate while we can. As a result we get number of lines.
     """
     print("Convex", convex)
+    convex_center = [sum(map(lambda v: v[0], convex)) / len(convex), sum(map(lambda v: v[1], convex)) / len(convex)]
+    print("Convex center", convex_center)
     print("Square", square(convex))
     ws = np.array([[0, 0], [0, 1], [1, 1], [1, 0]])
     i = 0
     size = len(convex)
     delta = square(ws) - square(convex)
+
     while abs(delta) > 1e-3:
         i += 1
         if i > 1000:
@@ -119,7 +122,7 @@ def fold(convex):
         print("Try edge", i % size, edge)
 
         ws_len = len(ws)
-        i_to_process = [v for v in range(ws_len) if len([x for x in convex if check_boundary(edge, ws[v], x)]) > 0]
+        i_to_process = [v for v in range(ws_len) if check_boundary(edge, ws[v], convex_center)]
         if len(i_to_process) == 0:
             continue
 
