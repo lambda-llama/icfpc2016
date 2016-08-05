@@ -145,7 +145,7 @@ def fold(convex):
         hull = ConvexHull(ws_new)
         ws = ws_new[hull.vertices]
         delta = square(ws) - square(convex)
-    print("Result found in", i, "iterations\n", ws)
+    print("Result found in", i, "iterations", "delta", delta, "approximation", ws)
 
 
 def mirror(p_x, p_y, x0, y0, x1, y1):
@@ -153,8 +153,8 @@ def mirror(p_x, p_y, x0, y0, x1, y1):
     dy = (y1 - y0)
     a = (dx * dx - dy * dy) / (dx * dx + dy * dy)
     b = 2 * dx * dy / (dx * dx + dy * dy)
-    x = round(a * (p_x - x0) + b * (p_y - y0) + x0)
-    y = round(b * (p_x - x0) - a * (p_y - y0) + y0)
+    x = a * (p_x - x0) + b * (p_y - y0) + x0
+    y = b * (p_x - x0) - a * (p_y - y0) + y0
     return [x, y]
 
 
