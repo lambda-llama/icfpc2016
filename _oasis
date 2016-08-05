@@ -8,14 +8,14 @@ License:        MIT
 BuildTools:     ocamlbuild
 BuildDepends:   core_kernel
 
-Library some_library
+Library origami
   Path:               src
   BuildDepends:       ppx_deriving.std
   Modules:            Types
   CompiledObject:     best
 
-Executable some_binary
+Executable folder
   Path:               bin
-  BuildDepends:       some_library
+  BuildDepends:       origami
   MainIs:             main.ml
   CompiledObject:     best
