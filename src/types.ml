@@ -12,6 +12,11 @@ module Vertex = struct
 
   let eq (x1, y1) (x2, y2) = eq_num x1 x2 && eq_num y1 y2
 
+  let compare (x1, y1) (x2, y2) =
+    match compare_num x1 x2 with
+    | 0      -> compare_num y1 y2
+    | result -> result
+
   let sub (x1, y1) (x2, y2) = (x1 -/ x2, y1 -/ y2)
 
   let dot (x1, y1) (x2, y2) = x1 */ x2 +/ y1 */ y2
@@ -43,6 +48,11 @@ module Segment = struct
   let eq_unordered (a, b) (c, d) =
     (Vertex.eq a c && Vertex.eq b d) ||
     (Vertex.eq a d && Vertex.eq b c)
+
+  let compare (a, b) (c, d) =
+    match Vertex.compare a c with
+    | 0      -> Vertex.compare b d
+    | result -> result
 end
 
 type poly = Vertex.t list
@@ -101,12 +111,22 @@ module Facet = struct
     in
     Option.value_exn (List.max_elt out_segs ~cmp:(fun x y -> if angle in_seg x < angle in_seg y then -1 else 1))
 
+  module SegmentMap = Hashtbl.Make(struct
+      type t = Vertex.t
+
+      let sexp_of_t _ = failwith "not implemented"
+      and t_of_sexp _ = failwith "not implemented"
+
+      let compare = Vertex.compare
+      and hash = Hashtbl.hash
+    end)
+
   let of_skeleton (s: skeleton) : t list =
     let half_edges = ref (List.concat_map s ~f:(fun (a, b) -> [(a, b); (b, a)])) in
-    let segmap = Hashtbl.Poly.create () in
+    let segmap = SegmentMap.create () in
     let poly_of_segment (start: Segment.t) : Segment.t list =
       let next s =
-        Hashtbl.Poly.find_exn segmap (snd s)
+        SegmentMap.find_exn segmap (snd s)
         |> List.filter ~f:(fun (a, b) -> not (Segment.eq (b, a) s))
         |> next_cc_segment s
       in let rec go work =
@@ -119,8 +139,8 @@ module Facet = struct
     let result = ref [] in
     begin
       List.iter s ~f:(fun (a, b) -> begin
-            Hashtbl.add_multi segmap ~key:a ~data:(a, b);
-            Hashtbl.add_multi segmap ~key:b ~data:(b, a);
+            SegmentMap.add_multi segmap ~key:a ~data:(a, b);
+            SegmentMap.add_multi segmap ~key:b ~data:(b, a);
             ()
           end);
       while not (List.is_empty !half_edges) do
