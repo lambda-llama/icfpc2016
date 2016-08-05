@@ -111,7 +111,7 @@ def fold(convex):
     size = len(convex)
     delta = square(ws) - square(convex)
 
-    while abs(delta) > 1e-3:
+    while abs(delta) > 0.1:
         i += 1
         if i > 50:
             break
