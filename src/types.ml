@@ -218,11 +218,9 @@ module Figure = struct
               ~f:(fun e -> List.for_all f ~f:(Segment.neq e));
 
           if Facet.area f >/ n 0 then
-            result := f::!result
+            result := (List.rev f)::!result
         end
       done;
-
-      result := List.map !result ~f:List.rev;
 
       match List.filter !result ~f:(fun f -> not (Facet.is_proper f)) with
       | [] -> !result
@@ -273,7 +271,7 @@ module Figure = struct
   (** Unfolds a given segment [s] of a figure [f]. *)
   let unfold f s =
     let targets = List.filter f
-        ~f:(fun target -> List.mem ~equal:Segment.eq target s)
+        ~f:(fun target -> List.mem ~equal:Segment.eq_unordered target s)
     in match targets with
     | [target] ->
         let neigbours = List.filter f ~f:(fun other ->
