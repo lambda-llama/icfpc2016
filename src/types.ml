@@ -63,10 +63,17 @@ module Facet = struct
   type t = Segment.t list [@@deriving show]
 
   (** Checks that all facet segments are consecutive. *)
-  let rec is_proper = function
+  let is_proper = function
   | [] | [_] -> true
-  | (_a, b)::(((c, _d)::_) as rest) ->
-    Vertex.eq b c && is_proper rest
+  | ((first, _)::_) as f ->
+    let rec go acc = function
+    | [] -> failwith "Facet.is_proper: impossible"
+    | [(_, last)] -> (acc, last)
+    | (_a, b)::(((c, _d)::_) as rest) ->
+      go (acc && Vertex.eq b c) rest
+    in
+
+    let (acc, last) = go true f in acc && Vertex.eq first last
 
   let rec fix (f: t): t =
     let merge_segments (a, b) (b', c) =
