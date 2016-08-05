@@ -6,12 +6,14 @@ Synopsis:       λ-llama submission for ICFP contest 2016
 Authors:        Sergei Lebedev <superbobry@gmail.com>
 License:        MIT
 BuildTools:     ocamlbuild
-BuildDepends:   core_kernel
+BuildDepends:   core_kernel,
+                num
 
 Library origami
   Path:               src
   BuildDepends:       ppx_deriving.std
-  Modules:            Types
+  Modules:            Types,
+                      Input
   CompiledObject:     best
 
 Executable folder

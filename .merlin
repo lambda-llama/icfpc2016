@@ -1,3 +1,4 @@
+PKG num
 PKG core_kernel
 PKG ppx_deriving.std
 S src

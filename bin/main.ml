@@ -1,2 +1,6 @@
+open Core_kernel.Std
+
 let () =
-  print_endline (Types.(show_expr (Add ((Num 1), (Num 2)))))
+  let s = In_channel.(input_all stdin) in
+  let p = Input.problem_of_string s in
+  print_endline @@ Types.show_problem p
