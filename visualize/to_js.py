@@ -74,6 +74,24 @@ def square(convex):
     return abs(s / 2)
 
 
+def check_boundary(edge, point1, point2):
+    """return true if points are on the different semi planes"""
+    xe = edge[1][0] - edge[0][0]
+    ye = edge[1][1] - edge[0][1]
+    x1 = point1[0] - edge[0][0]
+    y1 = point1[1] - edge[0][1]
+    x2 = point2[0] - edge[0][0]
+    y2 = point2[1] - edge[0][1]
+    cp1 = x1 * ye - y1 * xe
+    cp2 = x2 * ye - y2 * xe
+    # print("Xe", xe, "Ye", ye)
+    # print("X1", x1, "Y1", y1)
+    # print("X2", x2, "Y2", y2)
+    result = cp1 * cp2 < 0
+    # print("Boundary check", result)
+    return result
+
+
 def fold(convex):
     """
     Basic IDEA:
@@ -83,7 +101,33 @@ def fold(convex):
     If there is one, let fold, update Working set.
     Iterate while we can. As a result we get number of lines.
     """
+    print("Convex", convex)
     print("Square", square(convex))
+    ws = np.array([[0, 0], [0, 1], [1, 1], [1, 0]])
+    i = 0
+    size = len(convex)
+    delta = square(ws) - square(convex)
+    while abs(delta) > 1e-3:
+        print("Iteration", i)
+        print("WS", ws)
+        print("Delta", delta)
+        print("Try edge", i % size)
+        edge = (convex[i % size], convex[(i + 1) % size])
+        print("Edge", edge)
+
+        def check_ws(ws_i):
+            bound = len([x for x in convex if check_boundary(edge, ws[ws_i], x)]) > 0
+            # print("Summary check", ws_i, bound)
+            return bound
+
+        process = filter(lambda ws_i: check_ws(ws_i), range(len(ws)))
+        print("WS to process", [ws[i] for i in process])
+        i += 1
+        if i > 4:
+            break
+
+
+
 
 
 if __name__ == "__main__":
@@ -97,4 +141,3 @@ if __name__ == "__main__":
     convex_points = points[hull.vertices]
     print("Convex hull", convex_points)
     fold(convex_points)
-
