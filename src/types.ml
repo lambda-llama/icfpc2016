@@ -49,10 +49,8 @@ module Segment = struct
     (Vertex.eq a c && Vertex.eq b d) ||
     (Vertex.eq a d && Vertex.eq b c)
 
-  let compare (a, b) (c, d) =
-    match Vertex.compare a c with
-    | 0      -> Vertex.compare b d
-    | result -> result
+  let neq s1 s2 = not (eq s1 s2)
+  let neq_unordered s1 s2 = not (eq_unordered s1 s2)
 end
 
 type poly = Vertex.t list
@@ -72,9 +70,6 @@ let sort_cc =
 
 module Facet = struct
   type t = Segment.t list [@@deriving show]
-
-  (* XXX possibly duplicated. *)
-  let _vertices f = List.concat_map f ~f:(fun (a, b) -> [a; b])
 
   let intersects (f: t) (other: t) =
     List.exists f ~f:(List.mem ~equal:Segment.eq_unordered other)
@@ -212,29 +207,21 @@ module Figure = struct
             Facet.intersects other target)
         in
 
-        (* print_newline (); *)
-        (* printf ">>> target = %s\n" (Facet.show target); *)
-        (* List.iter neigbours ~f:(fun n -> printf ">>> neigbour = %s\n" (Facet.show n)); *)
-
         (* Remove segements common with [target] from neighbours. *)
         let skeleton = List.map neigbours
             ~f:(List.filter ~f:(fun s ->
                 not @@ List.mem ~equal:Segment.eq_unordered target s))
         in
 
-        (* List.iter skeleton ~f:(fun n -> *)
-        (*     printf "\n-----\n"; *)
-        (*     List.iter n ~f:(fun x -> printf ">>> segment = %s\n" (Segment.show x))); *)
-
         (* Remove the segment used for reflection from the result. *)
         let reflected =
-          Facet.reflect target s |> List.filter ~f:(Segment.eq s)
+          Facet.reflect target s |> List.filter ~f:(Segment.neq s)
         in
 
         let replacement = List.concat_no_order (reflected::skeleton) in
         let remaining = List.filter f ~f:(fun other ->
-            List.mem ~equal:phys_equal neigbours other ||
-            phys_equal other target)
+            not (List.mem ~equal:phys_equal neigbours other ||
+                 phys_equal other target))
         in replacement::remaining)  (* TODO: SORT! *)
 
   let () as _unfold_test =
