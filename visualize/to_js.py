@@ -48,8 +48,20 @@ def to_js(lines):
         x2 = parse_vertex(coords[2])
         y2 = parse_vertex(coords[3])
         skeletons.append([[x1, y1], [x2, y2]])
+    max_x = max(map(lambda polygon: max(map(lambda vertex: vertex[0], polygon)), polygons))
+    min_x = min(map(lambda polygon: min(map(lambda vertex: vertex[0], polygon)), polygons))
+    max_y = max(map(lambda polygon: max(map(lambda vertex: vertex[1], polygon)), polygons))
+    min_y = min(map(lambda polygon: min(map(lambda vertex: vertex[1], polygon)), polygons))
+    print("X in [{0}, {1}], Y in [{2}, {3}]".format(min_x, min_y, max_x, max_y), file=sys.stderr)
+    rescaled_polygons = [[
+                             [v[0] - min_x, v[1] - min_y]
+                             for v in p] for p in polygons]
+    rescaled_skeletons = [[
+                              [e[0][0] - min_x, e[0][1] - min_y],
+                              [e[1][0] - min_x, e[1][1] - min_y]]
+                          for e in skeletons]
 
-    return str([polygons, [], skeletons])
+    return str([rescaled_polygons, [], rescaled_skeletons])
 
 
 lines = sys.stdin.readlines()
