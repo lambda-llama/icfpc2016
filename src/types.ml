@@ -12,11 +12,6 @@ module Vertex = struct
 
   let eq (x1, y1) (x2, y2) = eq_num x1 x2 && eq_num y1 y2
 
-  let compare (x1, y1) (x2, y2) =
-    match compare_num x1 x2 with
-    | 0      -> compare_num y1 y2
-    | result -> result
-
   let sub (x1, y1) (x2, y2) = (x1 -/ x2, y1 -/ y2)
 
   let dot (x1, y1) (x2, y2) = x1 */ x2 +/ y1 */ y2
@@ -43,6 +38,8 @@ end
 
 module Segment = struct
   type t = Vertex.t * Vertex.t [@@deriving show]
+
+  let twin (a, b) = (b, a)
 
   let eq (a, b) (c, d) = Vertex.eq a c && Vertex.eq b d
   let eq_unordered (a, b) (c, d) =
@@ -71,8 +68,34 @@ let sort_cc =
 module Facet = struct
   type t = Segment.t list [@@deriving show]
 
-  let intersects (f: t) (other: t) =
-    List.exists f ~f:(List.mem ~equal:Segment.eq_unordered other)
+  let merge (f: t) (other: t): t =
+    let split_on_edge f on =
+      let (l, r) = List.split_while f ~f:(Segment.neq on) in
+      (l, List.tl_exn r)
+    in
+
+    let common = List.filter f
+        ~f:(fun s -> List.mem ~equal:Segment.eq other (Segment.twin s))
+    in match common with
+    | [on] ->
+      let (l1, r1) = split_on_edge f on
+      and (l2, r2) = split_on_edge other (Segment.twin on) in
+      List.concat [l1; r2; l2; r1]
+    | _other -> failwith "Facet.merge"
+
+  let () as _test_merge =
+    let a = (n 0, n 0)
+    and b = (n 0, n 1)
+    and c = (n 1, n 1)
+    and d = (n 1, n 0)
+    in begin
+      assert (merge [(a, c); (c, b); (b, a)] [(a, d); (d, c); (c, a)] = [
+          (a, d); (d, c); (c, b); (b, a);
+        ])
+    end
+
+  let intersects (f: t) (other: t) = List.exists f
+      ~f:(fun s -> List.mem ~equal:Segment.eq other (Segment.twin s))
 
   (* http://mathworld.wolfram.com/PolygonArea.html *)
   let area f =
@@ -112,7 +135,7 @@ module Facet = struct
       let sexp_of_t _ = failwith "not implemented"
       and t_of_sexp _ = failwith "not implemented"
 
-      let compare = Vertex.compare
+      let compare = Tuple2.compare ~cmp1:compare_num ~cmp2:compare_num
       and hash = Hashtbl.hash
     end)
 
@@ -207,34 +230,31 @@ module Figure = struct
             Facet.intersects other target)
         in
 
-        (* Remove segements common with [target] from neighbours. *)
-        let skeleton = List.map neigbours
-            ~f:(List.filter ~f:(fun s ->
-                not @@ List.mem ~equal:Segment.eq_unordered target s))
+        let replacement = List.fold (target::neigbours)
+            ~init:(Facet.reflect target s)
+            ~f:Facet.merge
         in
 
-        (* Remove the segment used for reflection from the result. *)
-        let reflected =
-          Facet.reflect target s |> List.filter ~f:(Segment.neq s)
-        in
-
-        let replacement = List.concat_no_order (reflected::skeleton) in
         let remaining = List.filter f ~f:(fun other ->
             not (List.mem ~equal:phys_equal neigbours other ||
                  phys_equal other target))
-        in replacement::remaining)  (* TODO: SORT! *)
+        in replacement::remaining)
 
   let () as _unfold_test =
     let a = (n 0, n 0)
     and b = (n 0, n 1)
     and c = (n 1, n 1)
-    and d = (n 1, n 0) in
+    and d = (n 1, n 0)
+    and e = (n 2, n 0) in
 
     let upper_triangle: Facet.t = [(a, b); (b, c); (c, a)]
     and lower_triangle: Facet.t = [(a, c); (c, d); (d, a)] in
 
-    let f: t = [upper_triangle; lower_triangle] in
-    ()
+    let f: t = [upper_triangle; lower_triangle] in begin
+      assert (unfold f (c, d) = Some [
+          [(e, d); (d, a); (a, b); (b, c); (c, e)]
+        ])
+    end
 
   let area = List.fold_left ~init:(num_of_int 0)
       ~f:(fun acc f -> acc +/ Facet.area f)
