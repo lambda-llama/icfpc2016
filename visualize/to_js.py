@@ -108,26 +108,71 @@ def fold(convex):
     size = len(convex)
     delta = square(ws) - square(convex)
     while abs(delta) > 1e-3:
+        i += 1
+        if i > 1000:
+            break
+
         print("Iteration", i)
         print("WS", ws)
         print("Delta", delta)
-        print("Try edge", i % size)
         edge = (convex[i % size], convex[(i + 1) % size])
-        print("Edge", edge)
+        print("Try edge", i % size, edge)
 
-        def check_ws(ws_i):
-            bound = len([x for x in convex if check_boundary(edge, ws[ws_i], x)]) > 0
-            # print("Summary check", ws_i, bound)
-            return bound
+        ws_len = len(ws)
+        i_to_process = [v for v in range(ws_len) if len([x for x in convex if check_boundary(edge, ws[v], x)]) > 0]
+        if len(i_to_process) == 0:
+            continue
 
-        process = filter(lambda ws_i: check_ws(ws_i), range(len(ws)))
-        print("WS to process", [ws[i] for i in process])
-        i += 1
-        if i > 4:
-            break
+        points_else = [[ws[i][0], ws[i][1]] for i in range(ws_len) if i not in i_to_process]
+        print("Else points", points_else)
+
+        points_to_mirror = [ws[i] for i in i_to_process]
+        print("Points to mirror", points_to_mirror)
+
+        mirrored = [mirror(v[0], v[1], edge[0][0], edge[0][1], edge[1][0], edge[1][1]) for v in points_to_mirror]
+        print("Mirrored", mirrored)
+
+        i_min = min(i_to_process)
+        i_max = max(i_to_process)
+        ws_prev_edge = [ws[(i_min - 1) % ws_len], ws[i_min]]
+        ws_next_edge = [ws[(i_max + 1) % ws_len], ws[i_max]]
+        print("Prev edge to intersect", ws_prev_edge)
+        print("Next edge to intersect", ws_next_edge)
+        point_intersection = [line_intersection(edge, ws_prev_edge), line_intersection(edge, ws_next_edge)]
+        print("Intersections", point_intersection)
+        ws_new = np.array(points_else + mirrored + point_intersection)
+        # print(ws_new)
+        hull = ConvexHull(ws_new)
+        ws = ws_new[hull.vertices]
+        delta = square(ws) - square(convex)
+    print("Result found in", i, "iterations\n", ws)
 
 
+def mirror(p_x, p_y, x0, y0, x1, y1):
+    dx = (x1 - x0)
+    dy = (y1 - y0)
+    a = (dx * dx - dy * dy) / (dx * dx + dy * dy)
+    b = 2 * dx * dy / (dx * dx + dy * dy)
+    x = round(a * (p_x - x0) + b * (p_y - y0) + x0)
+    y = round(b * (p_x - x0) - a * (p_y - y0) + y0)
+    return [x, y]
 
+
+def line_intersection(line1, line2):
+    dx = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
+    dy = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])  # Typo was here
+
+    def det(a, b):
+        return a[0] * b[1] - a[1] * b[0]
+
+    div = det(dx, dy)
+    if div == 0:
+        raise Exception('lines do not intersect')
+
+    d = (det(*line1), det(*line2))
+    x = det(d, dx) / div
+    y = det(d, dy) / div
+    return [x, y]
 
 
 if __name__ == "__main__":
@@ -139,5 +184,4 @@ if __name__ == "__main__":
     points = np.array([[v[0], v[1]] for p in polygons for v in p])
     hull = ConvexHull(polygons[0])
     convex_points = points[hull.vertices]
-    print("Convex hull", convex_points)
     fold(convex_points)
