@@ -26,8 +26,18 @@ let () as _test_search1 =
   let a = (n 0, n 0)
   and b = (n 0, div_num (n 1) (n 2))
   and c = (n 1, div_num (n 1) (n 2))
-  and d = (n 1, n 0)
-  in
+  and d = (n 1, n 0) in
 
   let skeleton = [(a, b); (b, c); (c, d); (d, a)] in
-  print_endline (Figure.show (search skeleton))
+  printf "1/2 square: %s\n" (Figure.show (search skeleton))
+
+
+let () as _test_search2 =
+  let h = div_num (n 1) (n 2) in
+  let a = (n 0, n 0)
+  and b = (n 0, h)
+  and c = (h, h)
+  and d = (n 1, n 0) in
+
+  let skeleton = [(a, b); (b, c); (c, d); (d, a); (a, c)] in
+  printf "spec. example: %s\n" (Figure.show (search skeleton))
