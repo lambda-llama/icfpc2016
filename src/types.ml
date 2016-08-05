@@ -215,6 +215,8 @@ module Figure = struct
         end
       done;
 
+      result := List.map !result ~f:List.rev;
+
       match List.filter !result ~f:(fun f -> not (Facet.is_proper f)) with
       | [] -> !result
       | improper ->
