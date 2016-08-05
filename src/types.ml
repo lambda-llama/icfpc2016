@@ -1,31 +1,41 @@
 open Num
 open Core_kernel.Std
 
-module Coord = struct
-  type t = num [@printer fun fmt n -> fprintf fmt "%s" (string_of_num n)]
-  [@@deriving show]
+let n = num_of_int
+
+type coord = num [@printer fun fmt n -> fprintf fmt "%s" (string_of_num n)]
+[@@deriving show]
+
+
+module Vertex = struct
+  type t = coord * coord [@@deriving show]
 
   let sub (x1, y1) (x2, y2) = (x1 -/ x2, y1 -/ y2)
 
+  let dot (x1, y1) (x2, y2) = x1 */ x2 +/ y1 */ y2
+
+  let norm v = dot v v
+
   (** Reflects a coordinate agains a line segment [a, b]. *)
   let reflect (x, y) (a, b) =
-    let (dx, dy) = sub b a in
-    let dnorm = dx */ dx +/ dy */ dy in
-    let u = div_num (dx */ dx -/ dy */ dy) dnorm
-    and v = div_num (num_of_int 2 */ dx */ dy) dnorm
-    in
+    let (dx, dy) as d = sub b a in
+    let u = div_num (dx */ dx -/ dy */ dy) (norm d)
+    and v = div_num (n 2 */ dx */ dy) (norm d) in
 
     (* http://math.stackexchange.com/q/65503/113653 *)
     let (ax, ay) = a in
-    (u */ (x -/ ax) +/ v */ (y -/ ay) +/ ay,
+    (u */ (x -/ ax) +/ v */ (y -/ ay) +/ ax,
      v */ (x -/ ax) -/ u */ (y -/ ay) +/ ay)
+
+  let () as _test_reflect = begin
+    assert (reflect (n 0, n 0) ((n 1, n 0), (n 1, n 1)) = (n 2, n 0));
+    assert (reflect (n 2, n 0) ((n 1, n 0), (n 1, n 1)) = (n 0, n 0))
+  end
 end
 
-type vertex = Coord.t * Coord.t
+type segment = Vertex.t * Vertex.t
 
-and segment = vertex * vertex
-
-and poly = vertex list
+and poly = Vertex.t list
 
 and silhouette = poly list
 
@@ -41,8 +51,7 @@ let sort_cc =
 
 
 module Facet = struct
-  type t = segment list
-    [@@deriving show]
+  type t = segment list [@@deriving show]
 
   (* XXX possibly duplicated. *)
   let _vertices f = List.concat_map f ~f:(fun (a, b) -> [a; b])
@@ -55,18 +64,25 @@ module Facet = struct
         ~f:(fun acc ((x1, y1), (x2, y2)) -> acc +/ (x1 */ y2 -/ x2 */ y1))
     in div_num s (num_of_int 2)
 
-  let reflect f: t = failwith ""
+  let reflect f s = List.rev_map f ~f:(fun (a, b) ->
+      (Vertex.reflect b s, Vertex.reflect a s))
 
-  open Num
-
-  let vsub (x1, y1) (x2, y2) = ((x1 -/ x2), (y1 -/ y2))
-  let dot (x1, y1) (x2, y2) = x1 */ x2 +/ y1 */ y2
+  let () as _test_reflect =
+    let a = (n 0, n 0)
+    and b = (n 0, n 1)
+    and c = (n 1, n 1)
+    and d = (n 1, n 0)
+    in begin
+      assert (reflect [(a, b); (b, c); (c, d); (d, a)] (c, d) = [
+          ((n 2, n 0), d); (d, c); (c, (n 2, n 1)); ((n 2, n 1), (n 2, n 0))
+        ])
+    end
 
   let next_cc_segment in_seg out_segs =
     let angle (s1, e1) (s2, e2) =
       assert (e1 = s2);
-      let (x1, y1) = vsub s1 e1 in (* opposite direction *)
-      let (x2, y2) = vsub e2 s2 in
+      let (x1, y1) = Vertex.sub s1 e1 in (* opposite direction *)
+      let (x2, y2) = Vertex.sub e2 s2 in
       let f = float_of_num in
       let clap x = if x < 0.0 then x +. 2.0 *. 3.141592 else x in
       let a x y = clap (atan2 (f y) (f x)) in
@@ -144,11 +160,11 @@ module Facet = struct
     let facets = of_skeleton skel in
     List.iter facets ~f:(fun f -> print_endline @@ show f);
     print_endline "Done!"
-
 end
 
+
 module Figure = struct
-  type t = Facet.t list
+  type t = Facet.t list [@@deriving show]
 
   let vertices f =
     let result = List.concat_map f
@@ -174,15 +190,28 @@ module Figure = struct
 
         (* Remove the segment used for reflection from the result. *)
         let reflected =
-          Facet.reflect target |> List.filter ~f:((phys_equal s))
+          Facet.reflect target s |> List.filter ~f:((phys_equal s))
         in
 
         let replacement = List.concat_no_order (reflected::skeleton) in
         let remaining = List.filter f ~f:(fun other ->
             List.mem ~equal:phys_equal neigbours other ||
             phys_equal other target)
-        in replacement::remaining  (* TODO: SORT! *)
-      )
+        in replacement::remaining)  (* TODO: SORT! *)
+
+  let () =
+    let a = (n 0, n 0)
+    and b = (n 1, n 0)
+    and c = (n 1, n 1)
+    and d = (n 0, n 1)
+    in
+
+    let upper_triangle: Facet.t = [(a, b); (b, c); (c, d)]
+    and lower_triangle: Facet.t = [(a, c); (c, d); (d, a)]
+    in
+
+    let f: t = [upper_triangle; lower_triangle] in
+    print_endline @@ show (Option.value_exn (unfold f (c, d)))
 
   let area = List.fold_left ~init:(num_of_int 0)
       ~f:(fun acc f -> acc +/ Facet.area f)
@@ -191,8 +220,7 @@ module Figure = struct
     let is_orthogonal (x1, y1) (x2, y2) =
       (x2 -/ x1) +/ (y2 -/ y1) = num_of_int 0
     in match vertices f with
-    | [a; b; c; d] -> is_orthogonal (Coord.sub b a) (Coord.sub c b) &&
-                      is_orthogonal (Coord.sub c b) (Coord.sub d c)
+    | [a; b; c; d] -> is_orthogonal (Vertex.sub b a) (Vertex.sub c b) &&
+                      is_orthogonal (Vertex.sub c b) (Vertex.sub d c)
     | _other       -> false
-
 end
