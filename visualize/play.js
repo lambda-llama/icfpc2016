@@ -7,9 +7,7 @@ function compute(t, n, data) {
 
         x = point[0] * x[0] + point[1] * x[1];
         if (point[0]) {
-
             l = [x / point[0], 0];
-
             b = [(x - point[1]) / point[0], 1];
         } else {
             if (!point[1]) {
@@ -17,15 +15,11 @@ function compute(t, n, data) {
             }
 
             l = [0, x / point[1]];
-
             b = [1, x / point[1]];
         }
         if (distance_and_product(minus(n, t), flip_y(minus(l, t)))[1] >= 0) {
-
             x = l;
-
             l = b;
-
             b = x;
         }
         x = fold(CURRENT_STATE.concat().reverse(), [], function (log, data) {

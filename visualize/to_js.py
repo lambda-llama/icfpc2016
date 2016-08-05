@@ -200,5 +200,4 @@ if __name__ == "__main__":
     (polygons, _, _) = silhouette
     points = np.array([[v[0], v[1]] for p in polygons for v in p])
     hull = ConvexHull(polygons[0])
-    convex_points = points[hull.vertices]
-    fold(convex_points)
+    fold(points[hull.vertices].tolist())
