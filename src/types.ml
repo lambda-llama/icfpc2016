@@ -6,6 +6,19 @@ module Coord = struct
   [@@deriving show]
 
   let sub (x1, y1) (x2, y2) = (x1 -/ x2, y1 -/ y2)
+
+  (** Reflects a coordinate agains a line segment [a, b]. *)
+  let reflect (x, y) (a, b) =
+    let (dx, dy) = sub b a in
+    let dnorm = dx */ dx +/ dy */ dy in
+    let u = div_num (dx */ dx -/ dy */ dy) dnorm
+    and v = div_num (num_of_int 2 */ dx */ dy) dnorm
+    in
+
+    (* http://math.stackexchange.com/q/65503/113653 *)
+    let (ax, ay) = a in
+    (u */ (x -/ ax) +/ v */ (y -/ ay) +/ ay,
+     v */ (x -/ ax) -/ u */ (y -/ ay) +/ ay)
 end
 
 type vertex = Coord.t * Coord.t
@@ -31,13 +44,8 @@ module Facet = struct
   type t = segment list
     [@@deriving show]
 
-  (* XX possibly duplicated. *)
-  let _segments = Fn.id
-
   (* XXX possibly duplicated. *)
   let _vertices f = List.concat_map f ~f:(fun (a, b) -> [a; b])
-
-  let _mem = List.mem
 
   let intersects f other = List.for_all f ~f:(List.mem other)
 
@@ -46,6 +54,8 @@ module Facet = struct
     let s = List.fold f ~init:(num_of_int 0)
         ~f:(fun acc ((x1, y1), (x2, y2)) -> acc +/ (x1 */ y2 -/ x2 */ y1))
     in div_num s (num_of_int 2)
+
+  let reflect f: t = failwith ""
 
   open Num
 
@@ -141,16 +151,37 @@ module Figure = struct
   type t = Facet.t list
 
   let vertices f =
-    List.concat_map f ~f:Facet._vertices |> List.dedup |> sort_cc
+    let result = List.concat_map f
+        ~f:(List.concat_map ~f:(fun (a, b) -> [a; b]))
+    in result |> List.dedup |> sort_cc
 
-  let segments f = List.concat_map f ~f:Facet._segments |> List.dedup
+  let segments f = List.concat f |> List.dedup
 
   (** Unfolds a given segment [s] of a figure [f]. *)
   let unfold f s =
-    List.find f ~f:(fun target -> Facet._mem target s)
+    List.find f ~f:(fun target -> List.mem target s)
     |> Option.map ~f:(fun target ->
-        let neigbours = List.filter f ~f:(Facet.intersects target) in
-        failwith "not implemented"
+        let neigbours = List.filter f ~f:(fun other ->
+            not (phys_equal other target) &&
+            Facet.intersects target other)
+        in
+
+        (* Remove segements common with [target] from neighbours. *)
+        let skeleton = List.map neigbours
+            ~f:(List.filter
+                  ~f:(fun s -> not @@ List.mem ~equal:phys_equal target s))
+        in
+
+        (* Remove the segment used for reflection from the result. *)
+        let reflected =
+          Facet.reflect target |> List.filter ~f:((phys_equal s))
+        in
+
+        let replacement = List.concat_no_order (reflected::skeleton) in
+        let remaining = List.filter f ~f:(fun other ->
+            List.mem ~equal:phys_equal neigbours other ||
+            phys_equal other target)
+        in replacement::remaining  (* TODO: SORT! *)
       )
 
   let area = List.fold_left ~init:(num_of_int 0)
