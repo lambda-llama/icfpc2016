@@ -6,6 +6,8 @@ import re
 import sys
 import numpy as np
 from scipy.spatial import ConvexHull
+import functools
+from math import atan
 
 
 def parse_vertex(s):
@@ -92,6 +94,14 @@ def check_boundary(edge, point1, point2):
     return result
 
 
+def compare_cos(center, point1, point2):
+    x1 = point1[0] - center[0]
+    y1 = point1[1] - center[1]
+    x2 = point2[0] - center[0]
+    y2 = point2[1] - center[1]
+    return x1 * y2 - x2 * y1
+
+
 def fold(convex):
     """
     Basic IDEA:
@@ -105,29 +115,39 @@ def fold(convex):
     convex_center = [sum(map(lambda v: v[0], convex)) / len(convex), sum(map(lambda v: v[1], convex)) / len(convex)]
     print("Convex center", convex_center)
     print("Square", square(convex))
-    ws = np.array([[0, 0], [0, 1], [1, 1], [1, 0]])
+    ws = [[0, 0], [1, 1], [0, 1], [1, 0]]
     i = 0
     size = len(convex)
-    delta = square(ws) - square(convex)
+    print("Convex size", size)
 
-    while abs(delta) > 1e-3:
+    def compare(x, y):
+        return compare_cos(convex_center, x, y)
+
+    ws = sorted(ws, key=functools.cmp_to_key(compare))
+    no_progress = 0
+
+    while True:
         i += 1
-        if i > 1000:
+        if i > size * 5:
+            print("Max operations threshold exceeded. Stop.")
             break
 
         print("Iteration", i)
         print("WS", ws)
-        print("Delta", delta)
         edge = (convex[i % size], convex[(i + 1) % size])
         print("Try edge", i % size, edge)
 
         ws_len = len(ws)
         i_to_process = [v for v in range(ws_len) if check_boundary(edge, ws[v], convex_center)]
-        if len(i_to_process) == 0:
-            continue
 
-        points_else = [[ws[i][0], ws[i][1]] for i in range(ws_len) if i not in i_to_process]
-        print("Else points", points_else)
+        print("No progress", no_progress)
+        if len(i_to_process) == 0:
+            no_progress += 1
+            if no_progress > size:
+                print("No progress for", no_progress, "steps. Stop.")
+                break
+            continue
+        no_progress = 0
 
         points_to_mirror = [ws[i] for i in i_to_process]
         print("Points to mirror", points_to_mirror)
@@ -143,12 +163,17 @@ def fold(convex):
         print("Next edge to intersect", ws_next_edge)
         point_intersection = [line_intersection(edge, ws_prev_edge), line_intersection(edge, ws_next_edge)]
         print("Intersections", point_intersection)
-        ws_new = np.array(points_else + mirrored + point_intersection)
-        # print(ws_new)
-        hull = ConvexHull(ws_new)
-        ws = ws_new[hull.vertices]
-        delta = square(ws) - square(convex)
-    print("Result found in", i, "iterations", "delta", delta, "approximation", ws)
+        points_else = [ws[i] for i in range(ws_len) if i not in i_to_process]
+        print("Else points", points_else)
+        ws_new = sorted(points_else + mirrored + point_intersection, key=functools.cmp_to_key(compare))
+        ws = []
+        p = [-1000, 1000]
+        for i in range(len(ws_new)):
+            if abs(p[0] - ws_new[i][0]) > 1e-3 or abs(p[1] - ws_new[i][1]) > 1e-3:
+                ws.append(ws_new[i])
+                p = ws_new[i]
+
+    print("Result found in", i, "iterations", "approximation", ws)
 
 
 def mirror(p_x, p_y, x0, y0, x1, y1):
@@ -187,4 +212,4 @@ if __name__ == "__main__":
     points = np.array([[v[0], v[1]] for p in polygons for v in p])
     hull = ConvexHull(polygons[0])
     convex_points = points[hull.vertices]
-    fold(convex_points)
+    fold(convex_points.tolist())
