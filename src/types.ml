@@ -61,13 +61,9 @@ module Facet = struct
       let a x y = let at = atan2 (f y) (f x) in
         if at < 0.0 then at +. 2.0 *. 3.1415926 else at
       in
-      let angle = (a x2 y2) -. (a x1 y1) in
-      printf "atan2 %s is %f\n" (show_vertex (x1, y1)) (a x1 y1);
-      printf "atan2 %s is %f\n" (show_vertex (x2, y2)) (a x2 y2);
-      printf "angle %s to %s is %f\n" (show_vertex (x1, y1)) (show_vertex (x2, y2)) angle;
-      angle
+      (a x2 y2) -. (a x1 y1)
     in
-    Option.value_exn (List.min_elt out_segs ~cmp:(fun x y -> if angle in_seg x < angle in_seg y then -1 else 1))
+    Option.value_exn (List.max_elt out_segs ~cmp:(fun x y -> if angle in_seg x < angle in_seg y then -1 else 1))
 
 
   let of_skeleton (s: skeleton) : t list =
