@@ -89,8 +89,20 @@ module Facet = struct
     and b = (n 0, n 1)
     and c = (n 1, n 1)
     and d = (n 1, n 0)
+    and e = (n 0, n 2)
+    and f = (n 1, n 2)
     in begin
       assert (merge [(a, c); (c, b); (b, a)] [(a, d); (d, c); (c, a)] = [
+          (a, d); (d, c); (c, b); (b, a);
+        ]);
+
+      let deleteme = merge
+                [(a, d); (d, c); (c, b); (b, a)]
+                [(b, c); (c, f); (f, e); (e, b)]
+      in print_endline (show deleteme);
+      assert (merge
+                [(a, d); (d, c); (c, b); (b, a)]
+                [(b, c); (c, f); (f, e); (e, b)] = [
           (a, d); (d, c); (c, b); (b, a);
         ])
     end
