@@ -252,18 +252,33 @@ module Figure = struct
 
     let f: t = [upper_triangle; lower_triangle] in begin
       assert (unfold f (c, d) = Some [
-          [(e, d); (d, a); (a, b); (b, c); (c, e)]
+          [(e, d); (d, a); (a, b); (b, c); (c, e) ]
         ])
     end
 
-  let area = List.fold_left ~init:(num_of_int 0)
+  let area = List.fold_left ~init:(n 0)
       ~f:(fun acc f -> acc +/ Facet.area f)
 
-  let is_square f =
+  let is_square (f: t) =
     let is_orthogonal (x1, y1) (x2, y2) =
-      (x2 -/ x1) +/ (y2 -/ y1) = num_of_int 0
-    in match vertices f with
-    | [a; b; c; d] -> is_orthogonal (Vertex.sub b a) (Vertex.sub c b) &&
-                      is_orthogonal (Vertex.sub c b) (Vertex.sub d c)
-    | _other       -> false
+      (x2 */ x1) +/ (y2 */ y1) = n 0
+    in match f with
+    | [[(a, d); (_d, c); (_c, b); (_b, _a)]] ->
+      is_orthogonal (Vertex.sub d a) (Vertex.sub c d) &&
+      is_orthogonal (Vertex.sub c b) (Vertex.sub a b)
+    | _other -> false
+
+  let () as _is_square_test =
+    let a = (n 0, n 0)
+    and b = (n 0, n 1)
+    and c = (n 1, n 1)
+    and d = (n 1, n 0) in
+
+    let square = [[(a, d); (d, c); (c, b); (b, a)]]
+    and poly = [[(a, d); (d, (n 2, n 2)); ((n 2, n 2), b); (b, a)]] in begin
+      assert (is_square square);
+      assert (area square = n 1);
+      assert (not (is_square poly));
+      assert (area poly <> n 1);
+    end
 end
