@@ -55,13 +55,12 @@ module Facet = struct
   let next_cc_segment in_seg out_segs =
     let angle (s1, e1) (s2, e2) =
       assert (e1 = s2);
-      let (x1, y1) = vsub e1 s1 in
+      let (x1, y1) = vsub s1 e1 in (* opposite direction *)
       let (x2, y2) = vsub e2 s2 in
       let f = float_of_num in
-      let a x y = let at = atan2 (f y) (f x) in
-        if at < 0.0 then at +. 2.0 *. 3.1415926 else at
-      in
-      (a x2 y2) -. (a x1 y1)
+      let clap x = if x < 0.0 then x +. 2.0 *. 3.141592 else x in
+      let a x y = clap (atan2 (f y) (f x)) in
+      clap ((a x2 y2) -. (a x1 y1))
     in
     Option.value_exn (List.max_elt out_segs ~cmp:(fun x y -> if angle in_seg x < angle in_seg y then -1 else 1))
 
@@ -92,7 +91,6 @@ module Facet = struct
         let next = List.hd_exn !half_edges in
         let facet = poly_of_segment next in
         begin
-          print_endline (show facet);
           half_edges := List.filter !half_edges ~f:(fun e -> List.for_all facet ~f:(fun ee -> e <> ee));
           result := facet :: !result
         end
@@ -100,18 +98,16 @@ module Facet = struct
       !result
     end
 
-  (* let () = *)
-  (*   let n = num_of_int in *)
-  (*   let up = ((n 0, n 0), (n 0, n 1)) in *)
-  (*   let down = ((n 0, n 2), (n 0, n 1)) in *)
-  (*   let left = ((n 0, n 1), (n ~-1, n 1)) in *)
-  (*   let right = ((n 0, n 1), (n  1, n 1)) in *)
-  (*   let ans1 = next_cc_segment up [left; right] in *)
-  (*   let ans2 = next_cc_segment down [left; right] in *)
-  (*   print_endline (show_segment ans1); *)
-  (*   print_endline (show_segment ans2); *)
-  (*   assert (ans1 = left); *)
-  (*   assert (ans2 = right) *)
+  let () =
+    let n = num_of_int in
+    let up = ((n 0, n 0), (n 0, n 1)) in
+    let down = ((n 0, n 2), (n 0, n 1)) in
+    let left = ((n 0, n 1), (n ~-1, n 1)) in
+    let right = ((n 0, n 1), (n  1, n 1)) in
+    let ans1 = next_cc_segment up [left; right] in
+    let ans2 = next_cc_segment down [left; right] in
+    assert (ans1 = left);
+    assert (ans2 = right)
 
   let () =
     let n = num_of_int in
@@ -119,25 +115,25 @@ module Facet = struct
     let right = ((n 1, n 1), (n  0, n 1)) in
     let down_right = ((n 1, n 1), (n  0, n 0)) in
     let ans = next_cc_segment up [right; down_right] in
-    print_endline (show_segment ans);
-    assert (ans = down_right);
+    assert (ans = down_right)
 
-  (* let () = *)
-  (*   let o = num_of_int 1 in *)
-  (*   let n = num_of_int 0 in *)
-  (*   let a = (n, n) in *)
-  (*   let b = (o, n) in *)
-  (*   let c = (o, o) in *)
-  (*   let d = (n, o) in *)
-  (*   let skel = [ *)
-  (*       (a, b); *)
-  (*       (b, c); *)
-  (*       (c, d); *)
-  (*       (a, d); *)
-  (*       (a, c); *)
-  (*     ] in *)
-  (*   let facets = of_skeleton skel in *)
-  (*   List.iter facets ~f:(fun f -> print_endline @@ show f) *)
+  let () =
+    let n = num_of_int in
+    let h = div_num (n 1) ( n 2) in
+    let a = (n 0, n 0) in
+    let b = (n 1, n 0) in
+    let c = (h, h) in
+    let d = (n 0, h) in
+    let skel = [
+        (a, b);
+        (b, c);
+        (c, d);
+        (a, d);
+        (a, c);
+      ] in
+    let facets = of_skeleton skel in
+    List.iter facets ~f:(fun f -> print_endline @@ show f);
+    print_endline "Done!"
 
 end
 
