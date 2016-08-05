@@ -197,24 +197,30 @@ module Figure = struct
            if Segment.eq n start then work else go (n :: work)
       in go [start]
     in
-    let result = ref [] in
-    begin
+    let result = ref [] in begin
       List.iter s ~f:(fun (a, b) -> begin
             SegmentMap.add_multi segmap ~key:a ~data:(a, b);
-            SegmentMap.add_multi segmap ~key:b ~data:(b, a);
-            ()
+            SegmentMap.add_multi segmap ~key:b ~data:(b, a)
           end);
+
       while not (List.is_empty !half_edges) do
         let next = List.hd_exn !half_edges in
-        let facet = poly_of_segment next in
+        let f = poly_of_segment next in
         begin
           half_edges := List.filter !half_edges
-              ~f:(fun e -> List.for_all facet ~f:(fun ee -> not (Segment.eq e ee)));
-          result := facet :: !result
+              ~f:(fun e -> List.for_all f ~f:(Segment.neq e));
+
+          if Facet.area f >/ n 0 then
+            result := f::!result
         end
       done;
-      assert (List.for_all !result ~f:Facet.is_proper);
-      List.filter !result ~f:(fun f -> Facet.area f >/ n 0)
+
+      match List.filter !result ~f:(fun f -> not (Facet.is_proper f)) with
+      | [] -> !result
+      | improper ->
+        let debug = sprintf "\n%s"
+            (String.concat ~sep:"\n" @@ List.map improper ~f:Facet.show)
+        in failwith ("Figure.of_skeleton: improper facets found:" ^ debug)
     end
 
   let () =
