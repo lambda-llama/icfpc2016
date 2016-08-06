@@ -201,7 +201,7 @@ module Figure = struct
       let a x y = clap (atan2 (f y) (f x)) in
       clap ((a x2 y2) -. (a x1 y1))
     in
-    Option.value_exn (List.max_elt out_segs ~cmp:(fun x y -> if angle in_seg x < angle in_seg y then -1 else 1))
+    Option.value_exn (List.max_elt out_segs ~cmp:(fun x y -> compare (angle in_seg x) (angle in_seg y)))
 
   module Vertextbl = Hashtbl.Make(Vertex.Key)
 
