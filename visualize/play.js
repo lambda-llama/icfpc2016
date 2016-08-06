@@ -27,11 +27,10 @@ function compute(t, n, data) {
                 var err = add(kv[0], a);
                 var typePattern = minus(b, l);
                 var n = W(minus(data[1], a[1]), typePattern);
-                if (n[1] != 0 && (n = W(minus(a[1], l), typePattern)[1] / -n[1],
-                    0 <= n && n < 1)) {
-                    return n = plus(a[1], distance_and_product(minus(data[1], a[1]), [n, 0])),
-                        n = [plus(distance_and_product(minus(data[0], a[0]), W(minus(n, a[1]), minus(data[1], a[1]))), a[0]), n],
-                        [add(kv[1], n), add(err, n)];
+                if (n[1] != 0 && (n = W(minus(a[1], l), typePattern)[1] / -n[1], 0 <= n && n < 1)) {
+                    n = plus(a[1], distance_and_product(minus(data[1], a[1]), [n, 0]));
+                    n = [plus(distance_and_product(minus(data[0], a[0]), W(minus(n, a[1]), minus(data[1], a[1]))), a[0]), n];
+                    return [add(kv[1], n), add(err, n)];
                 } else {
                     return [err, kv[1]];
                 }
@@ -66,7 +65,6 @@ function compute(t, n, data) {
             draw(x);
             var _ctx = $("#dst")[0].getContext("2d");
             apply([t, n], function (dataAndEvents) {
-
                 _ctx.fillStyle = "#000000";
                 _ctx.fillRect(dataAndEvents[0] - 1 / (SIZE / 2), dataAndEvents[1] - 1 / (SIZE / 2), 1 / (SIZE / 4), 1 / (SIZE / 4));
             });
