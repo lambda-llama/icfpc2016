@@ -19,8 +19,14 @@ Library origami
                       Engine
   CompiledObject:     best
 
-Executable folder
+Executable main
   Path:               bin
   BuildDepends:       origami
   MainIs:             main.ml
+  CompiledObject:     best
+
+Executable playground
+  Path:               bin
+  BuildDepends:       origami
+  MainIs:             debug.ml
   CompiledObject:     best

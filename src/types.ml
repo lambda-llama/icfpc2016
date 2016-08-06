@@ -293,20 +293,6 @@ module Figure = struct
     | [target] -> Some (Facet.reflect target s::f)
     | _other   -> None  (* 0 or >1 *)
 
-  (* let () as _unfold_test = *)
-  (*   let a = (n 0, n 0) *)
-  (*   and b = (n 0, n 1) *)
-  (*   and c = (n 1, n 1) *)
-  (*   and d = (n 1, n 0) *)
-  (*   and e = (n 2, n 0) in *)
-
-  (*   let upper_triangle: Facet.t = [(a, b); (b, c); (c, a)] *)
-  (*   and lower_triangle: Facet.t = [(a, c); (c, d); (d, a)] in *)
-
-  (*   let f: t = [upper_triangle; lower_triangle] in begin *)
-  (*     assert (unfold f (c, d) = Some [[(e, a); (a, b); (b, c); (c, e)]]) *)
-  (*   end *)
-
   let area = List.fold_left ~init:(n 0)
       ~f:(fun acc f -> acc +/ Facet.area f)
 
@@ -354,7 +340,7 @@ module Figure = struct
       then
         let rotate = failwith "TODO" in
         let translate = failwith "TODO" in
-        Some(Fn.compose rotate translate)
+        Some (Fn.compose rotate translate)
       else None
 
   let () as _to_unit_square_test =
