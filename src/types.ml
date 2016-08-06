@@ -192,6 +192,7 @@ module Figure = struct
   type t = Facet.t list [@@deriving show]
 
   let next_cc_segment in_seg out_segs =
+    assert (not @@ List.is_empty out_segs);
     let angle (s1, e1) (s2, e2) =
       assert (Vertex.eq e1 s2);
       let (x1, y1) = Vertex.sub s1 e1 in (* opposite direction *)
