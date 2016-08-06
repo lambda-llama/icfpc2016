@@ -20,8 +20,6 @@ let skeleton_to_facets (s: string): string =
   |> String.concat ~sep:"\n\n"
 
 
-module Vertextbl = Hashtbl.Make(Vertex.Key)
-
 let facet_to_lines vs_map (f : Facet.t) =
   let vs = Facet.vertices f in
   let n_vertices = List.length vs in
@@ -29,16 +27,8 @@ let facet_to_lines vs_map (f : Facet.t) =
    List.map vs ~f:(Fn.compose Int.to_string (Vertextbl.find_exn vs_map))
    |> String.concat ~sep:" "]
 
-let output_solution (dst, src) =
-  let src_dst_map = Vertextbl.create () in begin
-    List.zip_exn (Figure.vertices src) (Figure.vertices dst)
-    |> List.iter ~f:(fun (a, b) ->
-        ignore @@ Vertextbl.add src_dst_map ~key:a ~data:b)
-  end;
 
-  Vertextbl.iteri src_dst_map ~f:(fun ~key ~data ->
-      printf "%s --> %s\n" (Vertex.to_string key) (Vertex.to_string data));
-
+let output_solution src_dst_map src dst =
   let vs_map = Vertextbl.create () in
   let () = List.iter (Vertextbl.keys src_dst_map)
       ~f:(fun v -> Vertextbl.add_exn vs_map

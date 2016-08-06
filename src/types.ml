@@ -54,6 +54,7 @@ module Vertex = struct
   end
 end
 
+module Vertextbl = Hashtbl.Make(Vertex.Key)
 
 module Segment = struct
   type t = Vertex.t * Vertex.t [@@deriving show]
@@ -282,15 +283,36 @@ module Figure = struct
 
   let segments f = List.concat f |> List.dedup ~compare:Segment.compare
 
+  let _is_target =
+    let h = div_num (n 1) (n 2) in
+    let v = [[((h, n 1), (h, h)); ((h, h), (n 1, n 1)); ((n 1, n 1), (h, n 1))];
+             [((h, n 1), (n 0, n 1)); ((n 0, n 1), (h, h)); ((h, h), (h, n 1))];
+             [((n 1, n 0), (n 1, n 1)); ((n 1, n 1), (h, h)); ((h, h), (n 1, n 0))];
+             [((n 0, h), (h, h)); ((h, h), (n 0, n 1)); ((n 0, n 1), (n 0, h))];
+             [((n 1, n 0), (h, h)); ((h, h), (n 0, n 0)); ((n 0, n 0), (n 1, n 0))];
+             [((n 0, h), (n 0, n 0)); ((n 0, n 0), (h, h)); ((h, h), (n 0, h))]]
+    in List.equal ~equal:(List.equal ~equal:Segment.eq) v
+
   (** Unfolds a given segment [s] of a figure [f]. *)
-  let unfold pf f s =
-    let targets = List.filter f
+  let unfold dst src s =
+    let targets = List.filter src
         ~f:(fun target -> List.mem ~equal:Segment.eq_unordered target s)
     in match targets with
     | [target] ->
-      (* Read as (pre-figure, figure). *)
-      Some (target::f, (Facet.reflect target s::f))
-    | _other   -> None  (* 0 or >1 *)
+       let neigbours = List.filter src ~f:(fun other ->
+          not (phys_equal other target) &&
+          Facet.intersects other target)
+       in
+
+       let step (dst, src) target =
+         (* Read as (pre-figure, figure). *)
+         (List.rev_map target ~f:Segment.twin::dst,
+          Facet.reflect target s::src)
+       in
+
+       let base = step (dst, src) target in
+       base::List.map neigbours ~f:(step base)
+    | _other -> []  (* 0 or >1 *)
 
   let area = List.fold_left ~init:(n 0)
       ~f:(fun acc f -> acc +/ Facet.area f)
