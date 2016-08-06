@@ -39,30 +39,3 @@ let search dst: string =
                 ~f:(fun (_dst, src) -> area src <=/ n 1)))
       |> go (succ iter)
   in go 1 [(dst, dst)]
-
-
-(* let () as _test_search1 = *)
-(*   let a = (n 0, n 0) *)
-(*   and b = (n 0, div_num (n 1) (n 2)) *)
-(*   and c = (n 1, div_num (n 1) (n 2)) *)
-(*   and d = (n 1, n 0) in *)
-
-(*   let skeleton = [(a, b); (b, c); (c, d); (d, a)] in *)
-(*   let dst = Figure.of_skeleton skeleton in begin *)
-(*     prerr_endline "== 1/2 square =="; *)
-(*     prerr_endline @@ search dst *)
-(*   end *)
-
-
-(* let () as _test_search2 = *)
-(*   let h = div_num (n 1) (n 2) in *)
-(*   let a = (n 0, n 0) *)
-(*   and b = (n 0, h) *)
-(*   and c = (h, h) *)
-(*   and d = (n 1, n 0) in *)
-
-(*   let skeleton = [(a, b); (b, c); (c, d); (d, a); (a, c)] in *)
-(*   let dst = Figure.of_skeleton skeleton in begin *)
-(*     prerr_endline "== spec. example =="; *)
-(*     prerr_endline @@ search dst *)
-(*   end *)

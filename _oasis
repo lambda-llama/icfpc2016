@@ -16,7 +16,8 @@ Library origami
                       Internal,
                       Input,
                       Output,
-                      Engine
+                      Engine,
+                      Tests
   CompiledObject:     best
 
 Executable main
