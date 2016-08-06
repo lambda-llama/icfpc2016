@@ -6,7 +6,6 @@ import re
 import sys
 import numpy as np
 from scipy.spatial import ConvexHull
-import functools
 
 
 def parse_vertex(s):
@@ -67,16 +66,8 @@ def parse(lines):
     return [rescaled_polygons, [], rescaled_skeletons]
 
 
-def square(convex):
-    s = 0
-    ps = len(convex)
-    for i in range(0, ps):
-        s += convex[i][0] * convex[(i + 1) % ps][1] - convex[i][1] * convex[(i + 1) % ps][0]
-    return abs(s / 2)
-
-
 def check_boundary(edge, point1, point2):
-    """return true if points are on the different semi planes"""
+    """return true if points are on the same half planes"""
     xe = edge[1][0] - edge[0][0]
     ye = edge[1][1] - edge[0][1]
     x1 = point1[0] - edge[0][0]
@@ -85,85 +76,8 @@ def check_boundary(edge, point1, point2):
     y2 = point2[1] - edge[0][1]
     cp1 = x1 * ye - y1 * xe
     cp2 = x2 * ye - y2 * xe
-    # print("Xe", xe, "Ye", ye)
-    # print("X1", x1, "Y1", y1)
-    # print("X2", x2, "Y2", y2)
-    result = cp1 * cp2 < 0
-    # print("Boundary check", result)
+    result = cp1 * cp2 >= 0
     return result
-
-
-def fold(convex):
-    """
-    Basic IDEA:
-    All the loaded problems are already shifted to fit 1x1 square.
-    LET Working set = 4 square points
-    Iteratively for each edge in target convex check if any of the points from Working set is in another semi plane.
-    If there is one, let fold, update Working set.
-    Iterate while we can. As a result we get number of lines.
-    """
-    print("Convex", convex)
-    convex_center = [sum(map(lambda v: v[0], convex)) / len(convex), sum(map(lambda v: v[1], convex)) / len(convex)]
-    print("Convex center", convex_center)
-    print("Square", square(convex))
-    ws = [[0, 0], [0, 1], [1, 1], [1, 0]]
-    i = 0
-    size = len(convex)
-    delta = square(ws) - square(convex)
-
-    while abs(delta) > 0.1:
-        i += 1
-        if i > 50:
-            break
-
-        print("Iteration", i)
-        print("WS", ws)
-        print("Delta", delta)
-        edge = (convex[i % size], convex[(i + 1) % size])
-        print("Try edge", i % size, edge)
-
-        ws_len = len(ws)
-        i_to_process = [v for v in range(ws_len) if check_boundary(edge, ws[v], convex_center)]
-        if len(i_to_process) == 0:
-            continue
-
-        points_else = [ws[i] for i in range(ws_len) if i not in i_to_process]
-        print("Points to stay", points_else)
-
-        points_to_mirror = [ws[i] for i in i_to_process]
-        print("Points to mirror", points_to_mirror)
-
-        mirrored = [mirror(v[0], v[1], edge[0][0], edge[0][1], edge[1][0], edge[1][1]) for v in points_to_mirror]
-        print("Mirrored", mirrored)
-
-        i_min = min(i_to_process)
-        i_max = max(i_to_process)
-        ws_prev_edge = [ws[(i_min - 1) % ws_len], ws[i_min]]
-        ws_next_edge = [ws[(i_max + 1) % ws_len], ws[i_max]]
-        print("Prev edge to intersect", ws_prev_edge)
-        print("Next edge to intersect", ws_next_edge)
-        try:
-            point_intersection = [line_intersection(edge, ws_prev_edge), line_intersection(edge, ws_next_edge)]
-        except:
-            pass
-        print("Intersections", point_intersection)
-
-        ws_new = np.array(points_else + mirrored + point_intersection)
-        hull = ConvexHull(ws_new)
-        ws = remove_duplicates(ws_new[hull.vertices].tolist())
-        delta = square(ws) - square(convex)
-    print("Result found in", i, "iterations", "delta", delta, "approximation", ws)
-
-
-def remove_duplicates(ws_new):
-    ws = []
-    p = [-1000, 1000]
-    for i in range(len(ws_new)):
-        if abs(p[0] - ws_new[i][0]) > 1e-3 or abs(p[1] - ws_new[i][1]) > 1e-3:
-            ws.append(ws_new[i])
-            p = ws_new[i]
-    return ws
-
 
 def mirror(p_x, p_y, x0, y0, x1, y1):
     dx = (x1 - x0)
@@ -190,6 +104,115 @@ def line_intersection(line1, line2):
     x = det(d, dx) / div
     y = det(d, dy) / div
     return [x, y]
+
+
+def fold(convex):
+    """
+    Basic IDEA:
+    All the loaded problems are already shifted to fit 1x1 square.
+    LET Working set = 4 square points
+    Iteratively for each edge in target convex check if any of the edges from Working set is in another semi plane.
+    """
+    print("Convex", convex)
+    convex_center = [sum(map(lambda v: v[0], convex)) / len(convex), sum(map(lambda v: v[1], convex)) / len(convex)]
+    print("Convex center", convex_center)
+
+    # WSP coordinates of the points
+    ws_points = [[0, 0], [0, 1], [1, 1], [1, 0]]
+    # Points origins
+    ws_origins = [0, 1, 2, 3]
+    # WS edges contain edges
+    ws_edges = [[i, (i + 1) % len(ws_points)] for i in range(len(ws_points))]
+
+    iteration = 0
+    while True:
+        iteration += 1
+        if iteration > 5:
+            print("Iteration limit.", iteration - 1, "STOP")
+            break
+
+        print("ITERATION", iteration, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("Points", len(ws_points), ws_points)
+        print("Origins", len(ws_origins), ws_origins)
+        print("WS edges", len(ws_edges), ws_edges)
+
+        # Edge to try folding on
+        fold_edge = (convex[iteration % len(convex)], convex[(iteration + 1) % len(convex)])
+        print("Edge", iteration % len(convex), fold_edge)
+
+        ws_edges_new = []
+        no_progress = 0
+        for e in ws_edges:
+            p0 = ws_points[e[0]]
+            p1 = ws_points[e[1]]
+            check_p0 = check_boundary(fold_edge, convex_center, p0)
+            check_p1 = check_boundary(fold_edge, convex_center, p1)
+            n_points = len(ws_points)
+
+            if check_p0 and check_p1:
+                # This edge shouldn't be touched
+                ws_edges_new.append(e)
+                continue
+
+            if not check_p0 and not check_p1:
+                # This edge should be mirrored
+                p0_mirror = mirror(p0[0], p0[1], fold_edge[0][0], fold_edge[0][1], fold_edge[1][0], fold_edge[1][1])
+                p1_mirror = mirror(p1[0], p1[1], fold_edge[0][0], fold_edge[0][1], fold_edge[1][0], fold_edge[1][1])
+                # Add new edges and set origins
+                ws_points.append(p0_mirror)
+                ws_origins.append(e[0])
+                ws_points.append(p1_mirror)
+                ws_origins.append(e[1])
+                # New edge ids
+                ws_edges_new.append([len(ws_points) - 2, len(ws_points) - 1])
+                print("Edge", e, "mirrored to", ws_edges_new[len(ws_edges_new) - 1])
+
+            if check_p0 and not check_p1:
+                # p0 should be left intact, p1 should be mirrored + new fold point added
+                p1_mirror = mirror(p1[0], p1[1], fold_edge[0][0], fold_edge[0][1], fold_edge[1][0], fold_edge[1][1])
+                p_fold = line_intersection(fold_edge, [p0, p1])
+                ws_points.append(p1_mirror)
+                ws_origins.append(e[1])
+                ws_points.append(p_fold)
+                ws_origins.append([e[0], e[1], iteration % len(convex), (iteration + 1) % len(convex)])
+                # New edges ids
+                ws_edges_new.append([len(ws_points) - 2, len(ws_points) - 1])
+                ws_edges_new.append([e[0], len(ws_points) - 1])
+                print("Edge", e, "mirrored to",
+                      ws_edges_new[len(ws_edges_new) - 1], "and",
+                      ws_edges_new[len(ws_edges_new) - 2])
+
+            if not check_p0 and check_p1:
+                # p1 should be left intact, p0 should be mirrored + new fold point added
+                p0_mirror = mirror(p0[0], p0[1], fold_edge[0][0], fold_edge[0][1], fold_edge[1][0], fold_edge[1][1])
+                p_fold = line_intersection(fold_edge, [p0, p1])
+                ws_points.append(p0_mirror)
+                ws_origins.append(e[0])
+                ws_points.append(p_fold)
+                ws_origins.append([e[0], e[1], iteration % len(convex), (iteration + 1) % len(convex)])
+                # New edges ids
+                ws_edges_new.append([len(ws_points) - 2, len(ws_points) - 1])
+                ws_edges_new.append([e[1], len(ws_points) - 1])
+                print("Edge", e, "mirrored to",
+                      ws_edges_new[len(ws_edges_new) - 1], "and",
+                      ws_edges_new[len(ws_edges_new) - 2])
+
+            if n_points == len(ws_points):
+                print("Edge", iteration % len(convex), "nothing changed")
+                no_progress += 1
+
+        # Update edges and check for progress
+        ws_edges = ws_edges_new
+        if no_progress == len(convex):
+            print("No progress for", no_progress, "steps. STOP.")
+            break
+
+    print("Points", len(ws_points), ws_points)
+    print("Origins", len(ws_origins), ws_origins)
+    print("WS edges", len(ws_edges), ws_edges)
+    print("RESULT found in", iteration, "iterations")
+
+
 
 
 if __name__ == "__main__":
