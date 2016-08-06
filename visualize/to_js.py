@@ -7,6 +7,8 @@ import sys
 import numpy as np
 from scipy.spatial import ConvexHull
 
+import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
 
 def parse_vertex(s):
     if "/" in s:
@@ -79,6 +81,7 @@ def check_boundary(edge, point1, point2):
     result = cp1 * cp2 >= 0
     return result
 
+
 def mirror(p_x, p_y, x0, y0, x1, y1):
     dx = (x1 - x0)
     dy = (y1 - y0)
@@ -127,7 +130,7 @@ def fold(convex):
     iteration = 0
     while True:
         iteration += 1
-        if iteration > 5:
+        if iteration > 100:
             print("Iteration limit.", iteration - 1, "STOP")
             break
 
@@ -153,7 +156,7 @@ def fold(convex):
                 # This edge shouldn't be touched
                 ws_edges_new.append(e)
                 continue
-
+            fold_points = []
             if not check_p0 and not check_p1:
                 # This edge should be mirrored
                 p0_mirror = mirror(p0[0], p0[1], fold_edge[0][0], fold_edge[0][1], fold_edge[1][0], fold_edge[1][1])
@@ -174,6 +177,7 @@ def fold(convex):
                 ws_points.append(p1_mirror)
                 ws_origins.append(e[1])
                 ws_points.append(p_fold)
+                fold_points.append(len(ws_points) - 1)
                 ws_origins.append([e[0], e[1], iteration % len(convex), (iteration + 1) % len(convex)])
                 # New edges ids
                 ws_edges_new.append([len(ws_points) - 2, len(ws_points) - 1])
@@ -189,6 +193,7 @@ def fold(convex):
                 ws_points.append(p0_mirror)
                 ws_origins.append(e[0])
                 ws_points.append(p_fold)
+                fold_points.append(len(ws_points) - 1)
                 ws_origins.append([e[0], e[1], iteration % len(convex), (iteration + 1) % len(convex)])
                 # New edges ids
                 ws_edges_new.append([len(ws_points) - 2, len(ws_points) - 1])
@@ -196,6 +201,14 @@ def fold(convex):
                 print("Edge", e, "mirrored to",
                       ws_edges_new[len(ws_edges_new) - 1], "and",
                       ws_edges_new[len(ws_edges_new) - 2])
+
+            print("Fold points", fold_points)
+            # Add edges combined of new folded points
+            for i in fold_points:
+                for j in fold_points:
+                    if i == j:
+                        pass
+                    ws_edges_new.append([i, j])
 
             if n_points == len(ws_points):
                 print("Edge", iteration % len(convex), "nothing changed")
@@ -206,12 +219,23 @@ def fold(convex):
         if no_progress == len(convex):
             print("No progress for", no_progress, "steps. STOP.")
             break
+        ws_coords = [[ws_points[v[0]], ws_points[v[1]]] for v in ws_edges]
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.add_collection(LineCollection(ws_coords))
+        ax.autoscale()
+        ax.margins(0.1)
+        plt.savefig("out/viz_{0}.png".format(iteration))
 
     print("Points", len(ws_points), ws_points)
     print("Origins", len(ws_origins), ws_origins)
     print("WS edges", len(ws_edges), ws_edges)
     print("RESULT found in", iteration, "iterations")
 
+    print()
+    print("JS silhouette")
+    ws_coords = [[ws_points[v[0]], ws_points[v[1]]] for v in ws_edges]
+    print([[], [], ws_coords])
 
 
 
