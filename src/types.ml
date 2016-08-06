@@ -215,7 +215,7 @@ module Figure = struct
         |> next_cc_segment s
       in let rec go work =
            let n = next (List.hd_exn work) in
-           assert (n <> List.hd_exn work);
+           assert (Segment.neq n (List.hd_exn work));
            if Segment.eq n start then work else go (n :: work)
       in go [start]
     in

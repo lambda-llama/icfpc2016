@@ -20,5 +20,6 @@ def submit(problem_id, file):
 
 
 if __name__ == '__main__':
-    _, problem_id, file = sys.argv
-    print(submit(problem_id, file).text)
+    _, problem_id = sys.argv
+    path = "solutions/solution{}.txt".format(problem_id)
+    print(submit(problem_id, path).text)

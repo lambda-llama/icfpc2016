@@ -1,4 +1,3 @@
-open Num
 open Core_kernel.Std
 
 open Types
