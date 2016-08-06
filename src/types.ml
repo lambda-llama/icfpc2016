@@ -155,17 +155,17 @@ module Figure = struct
     prerr_string (l ^ "[" ^ s ^ "]");
     prerr_newline(); prerr_newline()
 
+  let angle (s1, e1) (s2, e2) =
+    assert (Vertex.eq e1 s2);
+    let (x1, y1) = Vertex.sub s1 e1 in (* opposite direction *)
+    let (x2, y2) = Vertex.sub e2 s2 in
+    let f = float_of_num in
+    let clap x = if x < 0.0 then x +. 2.0 *. 3.141592 else x in
+    let a x y = clap (atan2 (f y) (f x)) in
+    clap ((a x2 y2) -. (a x1 y1))
+
   let next_cc_segment in_seg out_segs =
     assert (not @@ List.is_empty out_segs);
-    let angle (s1, e1) (s2, e2) =
-      assert (Vertex.eq e1 s2);
-      let (x1, y1) = Vertex.sub s1 e1 in (* opposite direction *)
-      let (x2, y2) = Vertex.sub e2 s2 in
-      let f = float_of_num in
-      let clap x = if x < 0.0 then x +. 2.0 *. 3.141592 else x in
-      let a x y = clap (atan2 (f y) (f x)) in
-      clap ((a x2 y2) -. (a x1 y1))
-    in
     Option.value_exn (List.max_elt out_segs ~cmp:(fun x y -> compare (angle in_seg x) (angle in_seg y)))
 
   module Vertextbl = Hashtbl.Make(Vertex.Key)
@@ -193,9 +193,34 @@ module Figure = struct
 
   let of_skeleton (skel: skeleton) : t =
     let s = split_segments skel in
+    dumps_segments s ~l:"\nskel =\n";
     let half_edges = ref (List.concat_map s ~f:(fun (a, b) -> [(a, b); (b, a)])) in
     let segmap = Vertextbl.create () in
     List.iter !half_edges ~f:(fun (a, b) -> Vertextbl.add_multi segmap ~key:a ~data:(a, b));
+    let remove_from_segmap s =
+      let key = fst s in
+      let value = Vertextbl.find_exn segmap key in
+      Vertextbl.remove segmap key;
+      Vertextbl.add_exn segmap ~key:key ~data:(List.filter value ~f:(Segment.neq s))
+    in
+
+    let poly_of_segment2 (start: Segment.t) : Segment.t list option =
+      let rec go path =
+        let prev = List.hd_exn path in
+        let vertex = snd prev in
+        if Vertex.eq vertex (fst (List.last_exn path))
+        then Some path
+        else
+          Vertextbl.find_exn segmap vertex
+          |> List.filter ~f:(fun (a, b) -> Segment.neq (b, a) prev)
+          |> List.sort ~cmp:(fun a b -> compare (angle prev b) (angle prev a))
+          |> List.filter ~f:(fun s -> angle prev s >. 3.1415926)
+          |> List.find_map ~f:(fun nb -> go (nb::path))
+      in
+      go [start]
+
+    in
+
     let poly_of_segment (start: Segment.t) : Segment.t list =
       let next s =
         Vertextbl.find_exn segmap (snd s)
@@ -206,23 +231,35 @@ module Figure = struct
            assert (Segment.neq n (List.hd_exn work));
            if Segment.eq n start then work else go (n :: work)
       in go [start]
+
     in
     let result = ref [] in begin
 
       while not (List.is_empty !half_edges) do
+        dumps_segments ~l:"\n\nHE: " !half_edges;
         let next = List.hd_exn !half_edges in
-        let f = poly_of_segment next in
-        begin
-          half_edges := List.filter !half_edges
-              ~f:(fun e -> List.for_all f ~f:(Segment.neq e));
+        match poly_of_segment2 next with
+        | None ->
+          begin
+            half_edges := List.filter !half_edges
+                ~f:(Segment.neq next);
+            remove_from_segmap next
+          end
+        | Some f ->
+          begin
+            half_edges := List.filter !half_edges
+                ~f:(fun e -> List.for_all f ~f:(Segment.neq e));
+            List.iter f ~f:remove_from_segmap;
 
-          if Facet.area f >/ n 0 then
-            result := (List.rev f)::!result
-        end
+            if Facet.area f >/ n 0 then
+              result := (List.rev f)::!result
+          end
       done;
 
       match List.filter !result ~f:(fun f -> not (Facet.is_proper f)) with
-      | [] -> !result
+      | [] -> List.iter !result ~f:(dumps_segments ~l:"face:");
+          !result
+
       | improper ->
         let debug = sprintf "\n%s"
             (String.concat ~sep:"\n" @@ List.map improper ~f:Facet.show)
