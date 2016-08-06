@@ -71,7 +71,6 @@ function compute(t, n, data) {
                 _ctx.fillRect(dataAndEvents[0] - 1 / (SIZE / 2), dataAndEvents[1] - 1 / (SIZE / 2), 1 / (SIZE / 4), 1 / (SIZE / 4));
             });
         } else {
-            STATES.push(CURRENT_STATE);
             CURRENT_STATE = x;
             draw(CURRENT_STATE);
         }
@@ -268,9 +267,6 @@ var CURRENT_STATE = [[false,
         [[1, 1], [1, 1]],
         [[0, 1], [0, 1]]
     ]]];
-
-var STATES = [];
-
 
 var LOADED = 0;
 $(function () {
