@@ -278,7 +278,8 @@ module Figure = struct
     let facets = of_skeleton skel in
     ()
 
-  let vertices = List.concat_map ~f:Facet.vertices
+  let vertices f = List.concat_map f ~f:Facet.vertices
+                   |> List.dedup ~compare:Vertex.compare
 
   let segments f = List.concat f |> List.dedup ~compare:Segment.compare
 

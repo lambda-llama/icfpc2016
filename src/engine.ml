@@ -5,7 +5,7 @@ open Types
 
 let n = num_of_int
 
-let search skeleton =
+let search dst =
   let open Figure in
   let rec go iter = function
   | [] -> failwith "Engine.search: problem too hard"
@@ -20,7 +20,7 @@ let search skeleton =
       | None -> go (succ iter)
                   (List.filter candidates ~f:(fun f -> area f </ n 1))
     end
-  in go 0 [Figure.of_skeleton skeleton]
+  in go 0 [dst]
 
 
 let () as _test_search1 =
@@ -30,7 +30,11 @@ let () as _test_search1 =
   and d = (n 1, n 0) in
 
   let skeleton = [(a, b); (b, c); (c, d); (d, a)] in
-  printf "1/2 square: %s\n" (Figure.show (search skeleton))
+  let dst = Figure.of_skeleton skeleton in begin
+    print_endline "== 1/2 square ==";
+    print_endline (Output.output_figure (search dst) dst);
+    flush stdout
+  end
 
 
 let () as _test_search2 =
@@ -41,5 +45,8 @@ let () as _test_search2 =
   and d = (n 1, n 0) in
 
   let skeleton = [(a, b); (b, c); (c, d); (d, a); (a, c)] in
-  printf "spec. example: %s\n" (Figure.show (search skeleton));
-  flush stdout;
+  let dst = Figure.of_skeleton skeleton in begin
+    print_endline "== spec. example ==";
+    print_endline (Output.output_figure (search dst) dst);
+    flush stdout
+  end

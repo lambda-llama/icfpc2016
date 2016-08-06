@@ -1,6 +1,7 @@
 open Num
 open Core_kernel.Std
 
+open Types
 
 let unfold n ~init ~f =
   let rec go acc state = function
@@ -18,7 +19,7 @@ let shade_of_lines lines =
     | (line::rest) ->
       let n_vertices = Int.of_string line in
       let (chunk, rest) = List.split_n rest n_vertices in
-      (List.map chunk ~f:vertex_of_string), rest)
+      (List.map chunk ~f:Vertex.of_string), rest)
 
 
 let skeleton_of_lines lines =
