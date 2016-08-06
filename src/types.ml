@@ -326,6 +326,47 @@ module Figure = struct
         ~compare:compare_num (List.map vs ~f:snd)
     in x_max -/ x_min =/ n 1 && y_max -/ y_min =/ n 1
 
+  let to_unit_square (f: t) : (Vertex.t -> Vertex.t) option =
+    let vs = vertices f in
+    let (x_min, x_max) = Internal.min_max
+        ~compare:compare_num (List.map vs ~f:fst)
+    and (y_min, y_max) = Internal.min_max
+        ~compare:compare_num (List.map vs ~f:snd)
+    in if x_max -/ x_min =/ n 1 && y_max -/ y_min =/ n 1
+    then Some (fun (x, y) -> (x -/ x_min, y -/ y_min))
+    else
+      let ((top: Vertex.t), left, bottom, right) =
+        let by_x a b = compare_num (fst a) (fst b)
+        and by_y a b = compare_num (snd a) (snd b) in
+            (Option.value_exn (List.max_elt vs ~cmp:by_y),
+             Option.value_exn (List.min_elt vs ~cmp:by_x),
+             Option.value_exn (List.min_elt vs ~cmp:by_y),
+             Option.value_exn (List.max_elt vs ~cmp:by_x)) in
+      let open Vertex in
+      let is_unit p1 p2 = norm (sub p1 p2) =/ n 1 in
+      if is_unit top left && is_unit left bottom && is_unit bottom right && is_unit right top
+      then
+        let rotate = failwith "TODO" in
+        let translate = failwith "TODO" in
+        Some(Fn.compose rotate translate)
+      else None
+
+  let rec transform_figure m t = List.map t ~f:(transform_facet m)
+  and transform_facet m f = List.map f ~f:(transform_segment m)
+  and transform_segment m (a, b) = (m a, m b)
+
+  let () as _to_unit_square_test =
+    let (a, b, c, d) = ((n 0, n 0), (n 1, n 0), (n 1, n 1), (n 0, n 1)) in
+    let unit_square = [
+      [(a, b); (b, c); (c, d); (d, a)]
+    ] in
+    let rec figeq a b = List.for_all2_exn a b ~f:faceq
+    and faceq a b = List.for_all2_exn a b ~f:(fun a b -> 0 = Segment.compare a b) in
+    assert (figeq unit_square (transform_figure
+                                 (Option.value_exn (to_unit_square unit_square))
+                                 unit_square))
+
+
   let () as _is_square_test =
     let a = (n 0, n 0)
     and b = (n 0, n 1)
