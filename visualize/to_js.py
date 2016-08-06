@@ -227,8 +227,8 @@ def fold(convex):
         ax.add_collection(LineCollection(ws_coords))
         ax.autoscale()
         ax.margins(0.1)
-        plt.xlim((0, 1))
-        plt.ylim((0, 1))
+        plt.xlim((-1.5, 1.5))
+        plt.ylim((-1.5, 1.5))
         plt.savefig("out/viz_{0}.png".format(iteration))
 
     print("Points", len(ws_points), ws_points)
