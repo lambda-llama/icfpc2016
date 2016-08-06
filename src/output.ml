@@ -20,15 +20,7 @@ let skeleton_to_facets (s: string): string =
   |> String.concat ~sep:"\n\n"
 
 
-module Vertextbl = Hashtbl.Make(struct
-    type t = Vertex.t
-
-    let sexp_of_t = Fn.compose sexp_of_string Vertex.to_string
-    let t_of_sexp = Fn.compose Vertex.of_string string_of_sexp
-
-    let compare = Vertex.compare
-    and hash = Hashtbl.hash
-end)
+module Vertextbl = Hashtbl.Make(Vertex.Key)
 
 let facet_to_lines vs_map (f : Facet.t) =
   let vs = Facet.vertices f in

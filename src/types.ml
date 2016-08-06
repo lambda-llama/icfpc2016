@@ -42,6 +42,16 @@ module Vertex = struct
     assert (reflect (n 0, n 0) ((n 1, n 0), (n 1, n 1)) = (n 2, n 0));
     assert (reflect (n 2, n 0) ((n 1, n 0), (n 1, n 1)) = (n 0, n 0))
   end
+
+  module Key = struct
+    type nonrec t = t
+
+    let sexp_of_t = Fn.compose sexp_of_string to_string
+    let t_of_sexp = Fn.compose of_string string_of_sexp
+
+    let compare = compare
+    and hash = Hashtbl.hash
+  end
 end
 
 
@@ -192,22 +202,14 @@ module Figure = struct
     in
     Option.value_exn (List.max_elt out_segs ~cmp:(fun x y -> if angle in_seg x < angle in_seg y then -1 else 1))
 
-  module SegmentMap = Hashtbl.Make(struct
-      type t = Vertex.t
-
-      let sexp_of_t _ = failwith "not implemented"
-      and t_of_sexp _ = failwith "not implemented"
-
-      let compare = Vertex.compare
-      and hash = Hashtbl.hash
-    end)
+  module Vertextbl = Hashtbl.Make(Vertex.Key)
 
   let of_skeleton (s: skeleton) : t =
     let half_edges = ref (List.concat_map s ~f:(fun (a, b) -> [(a, b); (b, a)])) in
-    let segmap = SegmentMap.create () in
+    let segmap = Vertextbl.create () in
     let poly_of_segment (start: Segment.t) : Segment.t list =
       let next s =
-        SegmentMap.find_exn segmap (snd s)
+        Vertextbl.find_exn segmap (snd s)
         |> List.filter ~f:(fun (a, b) -> Segment.neq (b, a) s)
         |> next_cc_segment s
       in let rec go work =
@@ -218,8 +220,8 @@ module Figure = struct
     in
     let result = ref [] in begin
       List.iter s ~f:(fun (a, b) -> begin
-            SegmentMap.add_multi segmap ~key:a ~data:(a, b);
-            SegmentMap.add_multi segmap ~key:b ~data:(b, a)
+            Vertextbl.add_multi segmap ~key:a ~data:(a, b);
+            Vertextbl.add_multi segmap ~key:b ~data:(b, a)
           end);
 
       while not (List.is_empty !half_edges) do
