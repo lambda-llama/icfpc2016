@@ -13,6 +13,7 @@ Library origami
   Path:               src
   BuildDepends:       ppx_deriving.std
   Modules:            Types,
+                      Internal,
                       Input,
                       Output,
                       Engine

@@ -10,7 +10,16 @@ type coord = num [@printer fun fmt n -> fprintf fmt "%s" (string_of_num n)]
 module Vertex = struct
   type t = coord * coord [@@deriving show]
 
+  let to_string (x, y) = string_of_num x ^ "," ^ string_of_num y
+  and of_string s = match String.split_on_chars ~on:[','] s with
+  | [x; y] -> (num_of_string x, num_of_string y)
+  | _other -> failwith ("Vertex.of_string: invalid vertex: " ^ s)
+
   let eq (x1, y1) (x2, y2) = eq_num x1 x2 && eq_num y1 y2
+
+  let neq x1y1 x2y2 = not (eq x1y1 x2y2)
+
+  let compare = Tuple2.compare ~cmp1:compare_num ~cmp2:compare_num
 
   let sub (x1, y1) (x2, y2) = (x1 -/ x2, y1 -/ y2)
 
@@ -48,6 +57,8 @@ module Segment = struct
 
   let neq s1 s2 = not (eq s1 s2)
   let neq_unordered s1 s2 = not (eq_unordered s1 s2)
+
+  let compare = Tuple2.compare ~cmp1:Vertex.compare ~cmp2:Vertex.compare
 end
 
 type poly = Vertex.t list
@@ -121,7 +132,6 @@ module Facet = struct
     let f = [(a, b); (b, c); (c, d); (d, a)] in
     assert (fix f = [(a, c); (c, d); (d, a)])
 
-
   let () as _test_merge =
     let a = (n 0, n 0)
     and b = (n 0, n 1)
@@ -142,6 +152,8 @@ module Facet = struct
 
   let intersects (f: t) (other: t) = List.exists f
       ~f:(fun s -> List.mem ~equal:Segment.eq other (Segment.twin s))
+
+  let vertices = List.map ~f:fst
 
   (* http://mathworld.wolfram.com/PolygonArea.html *)
   let area f =
@@ -186,7 +198,7 @@ module Figure = struct
       let sexp_of_t _ = failwith "not implemented"
       and t_of_sexp _ = failwith "not implemented"
 
-      let compare = Tuple2.compare ~cmp1:compare_num ~cmp2:compare_num
+      let compare = Vertex.compare
       and hash = Hashtbl.hash
     end)
 
@@ -266,43 +278,31 @@ module Figure = struct
     let facets = of_skeleton skel in
     ()
 
-  let segments f = List.concat f |> List.dedup
+  let vertices = List.concat_map ~f:Facet.vertices
+
+  let segments f = List.concat f |> List.dedup ~compare:Segment.compare
 
   (** Unfolds a given segment [s] of a figure [f]. *)
   let unfold f s =
     let targets = List.filter f
         ~f:(fun target -> List.mem ~equal:Segment.eq_unordered target s)
     in match targets with
-    | [target] ->
-        let neigbours = List.filter f ~f:(fun other ->
-            not (phys_equal other target) &&
-            Facet.intersects other target)
-        in
+    | [target] -> Some (Facet.reflect target s::f)
+    | _other   -> None  (* 0 or >1 *)
 
-        let replacement = List.fold (target::neigbours)
-            ~init:(Facet.reflect target s)
-            ~f:Facet.merge
-        in
+  (* let () as _unfold_test = *)
+  (*   let a = (n 0, n 0) *)
+  (*   and b = (n 0, n 1) *)
+  (*   and c = (n 1, n 1) *)
+  (*   and d = (n 1, n 0) *)
+  (*   and e = (n 2, n 0) in *)
 
-        let remaining = List.filter f ~f:(fun other ->
-            not (List.mem ~equal:phys_equal neigbours other ||
-                 phys_equal other target))
-        in Some (replacement::remaining)
-    | _other -> None  (* 0 or >1 *)
+  (*   let upper_triangle: Facet.t = [(a, b); (b, c); (c, a)] *)
+  (*   and lower_triangle: Facet.t = [(a, c); (c, d); (d, a)] in *)
 
-  let () as _unfold_test =
-    let a = (n 0, n 0)
-    and b = (n 0, n 1)
-    and c = (n 1, n 1)
-    and d = (n 1, n 0)
-    and e = (n 2, n 0) in
-
-    let upper_triangle: Facet.t = [(a, b); (b, c); (c, a)]
-    and lower_triangle: Facet.t = [(a, c); (c, d); (d, a)] in
-
-    let f: t = [upper_triangle; lower_triangle] in begin
-      assert (unfold f (c, d) = Some [[(e, a); (a, b); (b, c); (c, e)]])
-    end
+  (*   let f: t = [upper_triangle; lower_triangle] in begin *)
+  (*     assert (unfold f (c, d) = Some [[(e, a); (a, b); (b, c); (c, e)]]) *)
+  (*   end *)
 
   let area = List.fold_left ~init:(n 0)
       ~f:(fun acc f -> acc +/ Facet.area f)
@@ -316,6 +316,14 @@ module Figure = struct
       is_orthogonal (Vertex.sub d a) (Vertex.sub c d) &&
       is_orthogonal (Vertex.sub c b) (Vertex.sub a b)
     | _other -> false
+
+  let is_square_approx (f : t) =
+    let vs = vertices f in
+    let (x_min, x_max) = Internal.min_max
+        ~compare:compare_num (List.map vs ~f:fst)
+    and (y_min, y_max) = Internal.min_max
+        ~compare:compare_num (List.map vs ~f:snd)
+    in x_max -/ x_min =/ n 1 && y_max -/ y_min =/ n 1
 
   let () as _is_square_test =
     let a = (n 0, n 0)

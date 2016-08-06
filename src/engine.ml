@@ -14,7 +14,8 @@ let search skeleton =
         List.filter_map (segments f) ~f:(unfold f))
     in begin
       printf "iter %04d: %d candidates\n" iter (List.length candidates);
-      match List.find candidates ~f:(fun f -> area f =/ n 1) with
+      match List.find candidates
+              ~f:(fun f -> area f =/ n 1 && Figure.is_square_approx f) with
       | Some solution -> solution
       | None -> go (succ iter)
                   (List.filter candidates ~f:(fun f -> area f </ n 1))
@@ -40,4 +41,5 @@ let () as _test_search2 =
   and d = (n 1, n 0) in
 
   let skeleton = [(a, b); (b, c); (c, d); (d, a); (a, c)] in
-  printf "spec. example: %s\n" (Figure.show (search skeleton))
+  printf "spec. example: %s\n" (Figure.show (search skeleton));
+  flush stdout;
