@@ -164,9 +164,9 @@ def fold(convex):
                 p1_mirror = mirror(p1[0], p1[1], fold_edge[0][0], fold_edge[0][1], fold_edge[1][0], fold_edge[1][1])
                 # Add new edges and set origins
                 ws_points.append(p0_mirror)
-                ws_origins.append(e[0])
+                ws_origins.append([e[0], "m", iteration % len(convex)])
                 ws_points.append(p1_mirror)
-                ws_origins.append(e[1])
+                ws_origins.append([e[1], "m", iteration % len(convex)])
                 # New edge ids
                 ws_edges_new.append([len(ws_points) - 2, len(ws_points) - 1])
                 print("Edge", e, "mirrored to", ws_edges_new[len(ws_edges_new) - 1])
@@ -176,10 +176,10 @@ def fold(convex):
                 p1_mirror = mirror(p1[0], p1[1], fold_edge[0][0], fold_edge[0][1], fold_edge[1][0], fold_edge[1][1])
                 p_fold = line_intersection(fold_edge, [p0, p1])
                 ws_points.append(p1_mirror)
-                ws_origins.append(e[1])
+                ws_origins.append([e[1], "m", iteration % len(convex)])
                 ws_points.append(p_fold)
                 fold_points.append(len(ws_points) - 1)
-                ws_origins.append([e[0], e[1], iteration % len(convex), (iteration + 1) % len(convex)])
+                ws_origins.append([e[0], e[1], "f", iteration % len(convex)])
                 # New edges ids
                 ws_edges_new.append([len(ws_points) - 2, len(ws_points) - 1])
                 ws_edges_new.append([e[0], len(ws_points) - 1])
@@ -192,10 +192,10 @@ def fold(convex):
                 p0_mirror = mirror(p0[0], p0[1], fold_edge[0][0], fold_edge[0][1], fold_edge[1][0], fold_edge[1][1])
                 p_fold = line_intersection(fold_edge, [p0, p1])
                 ws_points.append(p0_mirror)
-                ws_origins.append(e[0])
+                ws_origins.append([e[0], "m", iteration % len(convex)])
                 ws_points.append(p_fold)
                 fold_points.append(len(ws_points) - 1)
-                ws_origins.append([e[0], e[1], iteration % len(convex), (iteration + 1) % len(convex)])
+                ws_origins.append([e[0], e[1], "f", iteration % len(convex)])
                 # New edges ids
                 ws_edges_new.append([len(ws_points) - 2, len(ws_points) - 1])
                 ws_edges_new.append([e[1], len(ws_points) - 1])
