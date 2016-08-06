@@ -326,6 +326,10 @@ module Figure = struct
         ~compare:compare_num (List.map vs ~f:snd)
     in x_max -/ x_min =/ n 1 && y_max -/ y_min =/ n 1
 
+  let rec transform_figure m t = List.map t ~f:(transform_facet m)
+  and transform_facet m f = List.map f ~f:(transform_segment m)
+  and transform_segment m (a, b) = (m a, m b)
+
   let to_unit_square (f: t) : (Vertex.t -> Vertex.t) option =
     let vs = vertices f in
     let (x_min, x_max) = Internal.min_max
@@ -350,10 +354,6 @@ module Figure = struct
         let translate = failwith "TODO" in
         Some(Fn.compose rotate translate)
       else None
-
-  let rec transform_figure m t = List.map t ~f:(transform_facet m)
-  and transform_facet m f = List.map f ~f:(transform_segment m)
-  and transform_segment m (a, b) = (m a, m b)
 
   let () as _to_unit_square_test =
     let (a, b, c, d) = ((n 0, n 0), (n 1, n 0), (n 1, n 1), (n 0, n 1)) in
