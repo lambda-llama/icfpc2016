@@ -204,40 +204,6 @@ module Figure = struct
         in failwith ("Figure.of_skeleton: improper facets found:" ^ debug)
     end
 
-  let () =
-    let n = num_of_int in
-    let up = ((n 0, n 0), (n 0, n 1)) in
-    let down = ((n 0, n 2), (n 0, n 1)) in
-    let left = ((n 0, n 1), (n ~-1, n 1)) in
-    let right = ((n 0, n 1), (n  1, n 1)) in
-    let ans1 = next_cc_segment up [left; right] in
-    let ans2 = next_cc_segment down [left; right] in
-    assert (ans1 = left);
-    assert (ans2 = right)
-
-  let () =
-    let n = num_of_int in
-    let up = ((n 1, n 0), (n 1, n 1)) in
-    let right = ((n 1, n 1), (n  0, n 1)) in
-    let down_right = ((n 1, n 1), (n  0, n 0)) in
-    let ans = next_cc_segment up [right; down_right] in
-    assert (ans = down_right)
-
-  let () =
-    let n = num_of_int in
-    let h = div_num (n 1) (n 2) in
-    let a = (n 0, n 0) in
-    let b = (n 1, n 0) in
-    let c = (h, h) in
-    let d = (n 0, h) in
-    let skel = [
-        (a, b);
-        (b, c);
-        (c, d);
-        (a, d);
-        (a, c);
-      ] in ignore @@ of_skeleton skel
-
   let vertices f = List.concat_map f ~f:Facet.vertices
 
   let segments f = List.concat f |> List.dedup ~compare:Segment.compare

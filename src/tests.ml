@@ -76,6 +76,37 @@ module Figure_tests = struct
       assert (not (Figure.is_square_approx poly));
       assert (Figure.area poly <> n 1);
     end
+
+  let () =
+    let up = ((n 0, n 0), (n 0, n 1)) in
+    let down = ((n 0, n 2), (n 0, n 1)) in
+    let left = ((n 0, n 1), (n ~-1, n 1)) in
+    let right = ((n 0, n 1), (n  1, n 1)) in
+    let ans1 = Figure.next_cc_segment up [left; right] in
+    let ans2 = Figure.next_cc_segment down [left; right] in
+    assert (ans1 = left);
+    assert (ans2 = right)
+
+  let () =
+    let up = ((n 1, n 0), (n 1, n 1)) in
+    let right = ((n 1, n 1), (n  0, n 1)) in
+    let down_right = ((n 1, n 1), (n  0, n 0)) in
+    let ans = Figure.next_cc_segment up [right; down_right] in
+    assert (ans = down_right)
+
+  let () =
+    let h = div_num (n 1) (n 2) in
+    let a = (n 0, n 0) in
+    let b = (n 1, n 0) in
+    let c = (h, h) in
+    let d = (n 0, h) in
+    let skel = [
+        (a, b);
+        (b, c);
+        (c, d);
+        (a, d);
+        (a, c);
+      ] in ignore @@ Figure.of_skeleton skel
 end
 
 
