@@ -318,6 +318,11 @@ module Figure = struct
   and transform_facet m f = List.map f ~f:(transform_segment m)
   and transform_segment m (a, b) = (m a, m b)
 
+
+  let mk_rot cos sin =
+    fun (x, y) -> (x */ cos -/ y */ sin, x */ sin +/ y */ cos)
+
+
   let to_unit_square (f: t) : (Vertex.t -> Vertex.t) option =
     let vs = vertices f in
     let (x_min, x_max) = Internal.min_max
@@ -338,9 +343,13 @@ module Figure = struct
       let is_unit p1 p2 = norm (sub p1 p2) =/ n 1 in
       if is_unit top left && is_unit left bottom && is_unit bottom right && is_unit right top
       then
-        let rotate = failwith "TODO" in
-        let translate = failwith "TODO" in
-        Some (Fn.compose rotate translate)
+        let translate = fun (x, y) -> (x -/ fst left, y -/ snd left) in
+        let rotate =
+          let (cos, nsin) = translate bottom in
+          let sin = n 0 -/ nsin in
+          mk_rot cos sin
+        in
+        Some(Fn.compose rotate translate)
       else None
 
   let () as _to_unit_square_test =
@@ -348,6 +357,13 @@ module Figure = struct
     let unit_square = [
       [(a, b); (b, c); (c, d); (d, a)]
     ] in
+
+    (* let moved_rot_square = *)
+    (*   let r = mk_rot (div_num (n 3) (n 5)) (div_num (n 4) (n 5)) *)
+    (*   and t = fun (x, y) -> (x +/ n 1, y +/ n 1) in *)
+    (*   transform_figure (Fn.compose t r) unit_square *)
+    (* in *)
+
     let rec figeq a b = List.for_all2_exn a b ~f:faceq
     and faceq a b = List.for_all2_exn a b ~f:(fun a b -> 0 = Segment.compare a b) in
     assert (figeq unit_square (transform_figure
