@@ -276,35 +276,24 @@ module Figure = struct
         (c, d);
         (a, d);
         (a, c);
-      ] in
-    let facets = of_skeleton skel in
-    ()
+      ] in ignore @@ of_skeleton skel
 
   let vertices f = List.concat_map f ~f:Facet.vertices
-                   |> List.dedup ~compare:Vertex.compare
 
   let segments f = List.concat f |> List.dedup ~compare:Segment.compare
 
   (** Unfolds a given segment [s] of a figure [f]. *)
-  let unfold f s =
+  let unfold pf f s =
     let targets = List.filter f
         ~f:(fun target -> List.mem ~equal:Segment.eq_unordered target s)
     in match targets with
-    | [target] -> Some (Facet.reflect target s::f)
+    | [target] ->
+      (* Read as (pre-figure, figure). *)
+      Some (target::f, (Facet.reflect target s::f))
     | _other   -> None  (* 0 or >1 *)
 
   let area = List.fold_left ~init:(n 0)
       ~f:(fun acc f -> acc +/ Facet.area f)
-
-  let is_square (f: t) =
-    let is_orthogonal (x1, y1) (x2, y2) =
-      (x2 */ x1) +/ (y2 */ y1) = n 0
-    in match f with
-    | [[(a, d); (d', c); (c', b); (b', _a)]] ->
-      assert (d = d' && c = c' && b = b');
-      is_orthogonal (Vertex.sub d a) (Vertex.sub c d) &&
-      is_orthogonal (Vertex.sub c b) (Vertex.sub a b)
-    | _other -> false
 
   let is_square_approx (f : t) =
     let vs = vertices f in
@@ -370,7 +359,6 @@ module Figure = struct
                                  (Option.value_exn (to_unit_square unit_square))
                                  unit_square))
 
-
   let () as _is_square_test =
     let a = (n 0, n 0)
     and b = (n 0, n 1)
@@ -379,9 +367,9 @@ module Figure = struct
 
     let square = [[(a, d); (d, c); (c, b); (b, a)]]
     and poly = [[(a, d); (d, (n 2, n 2)); ((n 2, n 2), b); (b, a)]] in begin
-      assert (is_square square);
+      assert (is_square_approx square);
       assert (area square = n 1);
-      assert (not (is_square poly));
+      assert (not (is_square_approx poly));
       assert (area poly <> n 1);
     end
 end

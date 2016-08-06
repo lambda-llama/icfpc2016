@@ -29,22 +29,32 @@ let facet_to_lines vs_map (f : Facet.t) =
    List.map vs ~f:(Fn.compose Int.to_string (Vertextbl.find_exn vs_map))
    |> String.concat ~sep:" "]
 
-let output_figure src dst =
+let output_solution (dst, src) =
+  let src_dst_map = Vertextbl.create () in begin
+    List.zip_exn (Figure.vertices src) (Figure.vertices dst)
+    |> List.iter ~f:(fun (a, b) ->
+        ignore @@ Vertextbl.add src_dst_map ~key:a ~data:b)
+  end;
+
+  Vertextbl.iteri src_dst_map ~f:(fun ~key ~data ->
+      printf "%s --> %s\n" (Vertex.to_string key) (Vertex.to_string data));
+
   let vs_map = Vertextbl.create () in
-  let () = List.iter (Figure.vertices src)
+  let () = List.iter (Vertextbl.keys src_dst_map)
       ~f:(fun v -> Vertextbl.add_exn vs_map
              ~key:v ~data:(Vertextbl.length vs_map))
   in
 
   (* The source positions. *)
   let n_vertices = Vertextbl.length vs_map in
-  let lines1 =
-    (Int.to_string n_vertices)::
-    (Hashtbl.to_alist vs_map
-     |> List.map ~f:(fun (v, i) -> (i, Vertex.to_string v))
-     |> List.sort ~cmp:(Tuple2.compare ~cmp1:Int.compare ~cmp2:String.compare)
-     |> List.map ~f:snd)
+  let src_vs =
+    Vertextbl.to_alist vs_map
+    |> List.map ~f:(fun (v, i) -> (i, v))
+    |> List.sort ~cmp:(Tuple2.compare ~cmp1:Int.compare ~cmp2:Vertex.compare)
+    |> List.map ~f:snd
   in
+
+  let lines1 = Int.to_string n_vertices::List.map src_vs ~f:Vertex.to_string in
 
   (* The facets. *)
   let n_facets = List.length src in
@@ -53,11 +63,6 @@ let output_figure src dst =
   in
 
   (* The destination positions. *)
-  let lines3 =
-    List.map (Figure.vertices dst) ~f:(fun v ->
-        let i_opt = Vertextbl.find vs_map v in
-        (Option.value ~default:(Vertextbl.length vs_map) i_opt,
-         Vertex.to_string v))
-    |> List.sort ~cmp:(Tuple2.compare ~cmp1:Int.compare ~cmp2:String.compare)
-    |> List.map ~f:snd
-  in String.concat ~sep:"\n" (List.concat [lines1; lines2; lines3])
+  let dst_vs = List.map src_vs ~f:(Vertextbl.find_exn src_dst_map) in
+  let lines3 = List.map dst_vs ~f:Vertex.to_string in
+  String.concat ~sep:"\n" (List.concat [lines1; lines2; lines3])
