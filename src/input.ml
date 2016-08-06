@@ -1,6 +1,5 @@
 open Core_kernel.Std
 
-open Types
 
 let unfold n ~init ~f =
   let rec go acc state = function

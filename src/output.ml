@@ -1,13 +1,9 @@
-open Num
 open Core_kernel.Std
 
-open Types
+open Internal
 
-let s = string_of_num
-
-let show_facet segments =
-  segments
-  |> List.map ~f:(fun ((x1, y1), (x2, y2)) ->
+let show_facet {Facet.segments=ss} =
+  List.map ss ~f:(fun ((x1, y1), (x2, y2)) ->
       sprintf "%s,%s,%s,%s" (s x1) (s y1) (s x2) (s y2))
   |> String.concat ~sep:"\n"
 
@@ -20,25 +16,28 @@ let skeleton_to_facets (s: string): string =
   |> String.concat ~sep:"\n\n"
 
 
+module VT = Hashtbl.Make(Vertex)
+
+
 let facet_to_lines vs_map (f : Facet.t) =
   let vs = Facet.vertices f in
   let n_vertices = List.length vs in
   [Int.to_string n_vertices;
-   List.map vs ~f:(Fn.compose Int.to_string (Vertextbl.find_exn vs_map))
+   List.map vs ~f:(Fn.compose Int.to_string (VT.find_exn vs_map))
    |> String.concat ~sep:" "]
 
 
 let output_solution src_dst_map src dst =
-  let vs_map = Vertextbl.create () in
-  let () = List.iter (Vertextbl.keys src_dst_map)
-      ~f:(fun v -> Vertextbl.add_exn vs_map
-             ~key:v ~data:(Vertextbl.length vs_map))
+  let vs_map = VT.create () in
+  let () = List.iter (VT.keys src_dst_map)
+      ~f:(fun v -> VT.add_exn vs_map
+             ~key:v ~data:(VT.length vs_map))
   in
 
   (* The source positions. *)
-  let n_vertices = Vertextbl.length vs_map in
+  let n_vertices = VT.length vs_map in
   let src_vs =
-    Vertextbl.to_alist vs_map
+    VT.to_alist vs_map
     |> List.map ~f:(fun (v, i) -> (i, v))
     |> List.sort ~cmp:(Tuple2.compare ~cmp1:Int.compare ~cmp2:Vertex.compare)
     |> List.map ~f:snd
@@ -53,6 +52,6 @@ let output_solution src_dst_map src dst =
   in
 
   (* The destination positions. *)
-  let dst_vs = List.map src_vs ~f:(Vertextbl.find_exn src_dst_map) in
+  let dst_vs = List.map src_vs ~f:(VT.find_exn src_dst_map) in
   let lines3 = List.map dst_vs ~f:Vertex.to_string in
   String.concat ~sep:"\n" (List.concat [lines1; lines2; lines3])

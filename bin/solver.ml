@@ -1,7 +1,5 @@
 open Core_kernel.Std
 
-open Types
-
 let (</>) = Filename.concat
 
 let () =

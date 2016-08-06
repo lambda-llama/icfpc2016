@@ -1,6 +1,7 @@
 PKG num
 PKG core_kernel
 PKG ppx_deriving.std
+PKG landmarks
 S src
 S bin
 B _build/src

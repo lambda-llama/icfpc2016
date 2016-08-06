@@ -1,7 +1,7 @@
 open Num
 open Core_kernel.Std
 
-open Types
+open Internal
 
 module Vertex_tests = struct
   let () as _test_reflect = begin
@@ -26,15 +26,17 @@ module Facet_tests = struct
     and d = (n 1, n 0)
     and e = (n 0, n 2)
     and f = (n 1, n 2)
-    in begin
-      assert (Facet.merge [(a, c); (c, b); (b, a)] [(a, d); (d, c); (c, a)] = [
+    in let open Facet in begin
+      assert ((merge
+                 (create [(a, c); (c, b); (b, a)])
+                 (create [(a, d); (d, c); (c, a)])) = create [
           (a, d); (d, c); (c, b); (b, a);
         ]);
-      assert (Facet.merge
-                [(a, d); (d, c); (c, b); (b, a)]
-                [(b, c); (c, f); (f, e); (e, b)] = [
-                (a, d); (d, f); (f, e); (e, a);
-              ])
+      assert ((merge
+                (create [(a, d); (d, c); (c, b); (b, a)])
+                (create [(b, c); (c, f); (f, e); (e, b)])) = create [
+          (a, d); (d, f); (f, e); (e, a);
+        ])
     end
 
   let () as _test_reflect =
@@ -42,8 +44,10 @@ module Facet_tests = struct
     and b = (n 0, n 1)
     and c = (n 1, n 1)
     and d = (n 1, n 0)
-    in begin
-      assert (Facet.reflect [(a, b); (b, c); (c, d); (d, a)] (c, d) = [
+    in let open Facet in begin
+      assert ((reflect
+                (create [(a, b); (b, c); (c, d); (d, a)])
+                (c, d)) = create [
           ((n 2, n 0), d); (d, c); (c, (n 2, n 1)); ((n 2, n 1), (n 2, n 0))
         ])
     end
@@ -54,12 +58,10 @@ module Figure_tests = struct
   let () as _to_unit_square_test =
     let (a, b, c, d) = ((n 0, n 0), (n 1, n 0), (n 1, n 1), (n 0, n 1)) in
     let unit_square = [
-      [(a, b); (b, c); (c, d); (d, a)]
+      Facet.create [(a, b); (b, c); (c, d); (d, a)]
     ] in
 
-    let rec figeq a b = List.for_all2_exn a b ~f:faceq
-    and faceq a b =
-      List.for_all2_exn a b ~f:(fun a b -> 0 = Segment.compare a b)
+    let figeq a b = List.for_all2_exn a b ~f:Facet.eq
     and tus = Option.value_exn (Figure.to_unit_square unit_square)
     in assert (figeq unit_square (Figure.transform_figure tus unit_square))
 
@@ -69,8 +71,10 @@ module Figure_tests = struct
     and c = (n 1, n 1)
     and d = (n 1, n 0) in
 
-    let square = [[(a, d); (d, c); (c, b); (b, a)]]
-    and poly = [[(a, d); (d, (n 2, n 2)); ((n 2, n 2), b); (b, a)]] in begin
+    let square = [Facet.create [(a, d); (d, c); (c, b); (b, a)]]
+    and poly = [
+      Facet.create [(a, d); (d, (n 2, n 2)); ((n 2, n 2), b); (b, a)]
+    ] in begin
       assert (Figure.is_square_approx square);
       assert (Figure.area square = n 1);
       assert (not (Figure.is_square_approx poly));
@@ -137,3 +141,5 @@ module Engine_tests = struct
       prerr_endline @@ Engine.search dst
     end
 end
+
+let run () = ()
