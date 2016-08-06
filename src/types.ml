@@ -149,6 +149,12 @@ end
 module Figure = struct
   type t = Facet.t list [@@deriving show]
 
+  let dumps_segments segs ?l:(l="") =
+    let s = List.map segs ~f:Segment.show
+    |> String.concat ~sep:", " in
+    prerr_string (l ^ "[" ^ s ^ "]");
+    prerr_newline(); prerr_newline()
+
   let next_cc_segment in_seg out_segs =
     assert (not @@ List.is_empty out_segs);
     let angle (s1, e1) (s2, e2) =
@@ -164,9 +170,32 @@ module Figure = struct
 
   module Vertextbl = Hashtbl.Make(Vertex.Key)
 
-  let of_skeleton (s: skeleton) : t =
+
+  let split_segments segs =
+    let is_between b e mid =
+      if Vertex.eq b mid || Vertex.eq e mid
+      then false
+      else
+        let v1 = Vertex.sub b mid in
+        let v2 = Vertex.sub e mid in
+        let d = (Vertex.dot v1 v2) in
+        d </ n 0 && d */ d =/ Vertex.norm v1 */ Vertex.norm v2
+    in
+    let vertecies = List.dedup ~compare:Vertex.compare (List.concat_map segs ~f:(fun (a, b) -> [a; b])) in
+    let rec go segs =
+      match segs with
+      | [] -> []
+      | (b, e)::xs -> match List.find vertecies ~f:(is_between b e) with
+        | None -> (b, e)::go xs
+        | Some mid -> go ((b, mid)::(mid, e)::xs)
+    in
+    go segs
+
+  let of_skeleton (skel: skeleton) : t =
+    let s = split_segments skel in
     let half_edges = ref (List.concat_map s ~f:(fun (a, b) -> [(a, b); (b, a)])) in
     let segmap = Vertextbl.create () in
+    List.iter !half_edges ~f:(fun (a, b) -> Vertextbl.add_multi segmap ~key:a ~data:(a, b));
     let poly_of_segment (start: Segment.t) : Segment.t list =
       let next s =
         Vertextbl.find_exn segmap (snd s)
@@ -179,10 +208,6 @@ module Figure = struct
       in go [start]
     in
     let result = ref [] in begin
-      List.iter s ~f:(fun (a, b) -> begin
-            Vertextbl.add_multi segmap ~key:a ~data:(a, b);
-            Vertextbl.add_multi segmap ~key:b ~data:(b, a)
-          end);
 
       while not (List.is_empty !half_edges) do
         let next = List.hd_exn !half_edges in
