@@ -12,8 +12,7 @@ let map_src_dst src dst =
       match Vertextbl.find src_dst_map a with
       | Some c -> Vertex.eq b c
       | None   -> Vertextbl.add_exn src_dst_map ~key:a ~data:b; true)
-  in if result then Some src_dst_map else ((if Figure._is_target src then
-                                              List.iter ps ~f:(fun (a, b) -> printf "%s --> %s\n" (Vertex.to_string a) (Vertex.to_string b))); printf "\n\n"; None)
+  in if result then Some src_dst_map else None
 
 
 let search dst: string =
@@ -39,21 +38,21 @@ let search dst: string =
         solution
       | _other -> go (succ iter) candidates
     end
-  in go 0 [(dst, dst)]
+  in go 1 [(dst, dst)]
 
 
-(* let () as _test_search1 = *)
-(*   let a = (n 0, n 0) *)
-(*   and b = (n 0, div_num (n 1) (n 2)) *)
-(*   and c = (n 1, div_num (n 1) (n 2)) *)
-(*   and d = (n 1, n 0) in *)
+let () as _test_search1 =
+  let a = (n 0, n 0)
+  and b = (n 0, div_num (n 1) (n 2))
+  and c = (n 1, div_num (n 1) (n 2))
+  and d = (n 1, n 0) in
 
-(*   let skeleton = [(a, b); (b, c); (c, d); (d, a)] in *)
-(*   let dst = Figure.of_skeleton skeleton in begin *)
-(*     print_endline "== 1/2 square =="; *)
-(*     print_endline @@ search dst; *)
-(*     flush stdout *)
-(*   end *)
+  let skeleton = [(a, b); (b, c); (c, d); (d, a)] in
+  let dst = Figure.of_skeleton skeleton in begin
+    print_endline "== 1/2 square ==";
+    print_endline @@ search dst;
+    flush stdout
+  end
 
 
 let () as _test_search2 =
