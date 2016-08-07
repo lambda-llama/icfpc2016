@@ -1,13 +1,16 @@
 import os.path
 import subprocess
+import sys
 import time
 
 from api import submit_solution
 
 
 if __name__ == '__main__':
-    prob_fst = 103
-    prob_last = 710
+    try:
+        [prob_fst, prob_last] = map(int, sys.argv[1:])
+    except ValueError:
+        sys.exit("usage: %prog ID_START ID_END")
 
     for i in range(prob_fst, prob_last):
         print("problem {:04d}:".format(i), end=" ")
@@ -28,6 +31,10 @@ if __name__ == '__main__':
             print("FAILED")
             continue
 
-        print("OK " + solution_path)
-        print(submit_solution(i, solution_path).text)
+        response = submit_solution(i, solution_path).json()
+        if response["ok"]:
+            print("OK " + solution_path)
+        else:
+            os.remove(solution_path)
+            print("ERROR " + response["error"])
         time.sleep(5)
