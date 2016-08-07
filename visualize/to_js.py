@@ -22,7 +22,6 @@ def parse_vertex(s):
 def length(edge):
     p0 = edge[0]
     p1 = edge[1]
-    print("Edge p0", p0, "p1", p1)
     return sqrt((p1[0] - p0[0]) * (p1[0] - p0[0]) + (p1[1] - p0[1]) * (p1[1] - p0[1]))
 
 
@@ -103,7 +102,7 @@ def mirror(p_x, p_y, x0, y0, x1, y1):
 
 def line_intersection(line1, line2):
     dx = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
-    dy = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])  # Typo was here
+    dy = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
 
     def det(a, b):
         return a[0] * b[1] - a[1] * b[0]
@@ -119,36 +118,58 @@ def line_intersection(line1, line2):
 
 
 class Point:
-    def __init__(self, id, x, y):
-        self.id = id
+    counter = 0
+
+    def __init__(self, x, y, z):
+        self.id = Point.counter
+        Point.counter += 1
         self.x = x
         self.y = y
+        self.z = z
 
     def coords(self):
         return [self.x, self.y]
 
+    def z(self):
+        return self.z
+
     def __repr__(self):
-        return 'Point{0}[{1}, {2}]'.format(self.id, self.x, self.y)
+        return 'P{0}[{1}, {2}]'.format(self.id, self.x, self.y)
 
 
 class Mirror(Point):
-    def __init__(self, id, x, y, source):
-        super().__init__(id, x, y)
+    def __init__(self, x, y, z, source):
+        super().__init__(x, y, z)
         self.source = source
 
     def __repr__(self):
-        return 'Mirror{0}[{1}, {2}] {3}'.format(self.id, self.x, self.y, self.source)
+        return 'M{0}[{1}, {2}]'.format(self.id, self.x, self.y)
 
 
 class Fold(Point):
-    def __init__(self, id, x, y, mirror, left, coefficient):
-        super().__init__(id, x, y)
-        self.mirror = mirror
-        self.left = left
+    def __init__(self, x, y, z, start, end, coefficient):
+        super().__init__(x, y, z)
+        self.start = start
+        self.end = end
         self.coefficient = coefficient
 
     def __repr__(self):
-        return 'Fold{0}[{1}, {2}] {3}_{4}_{5}'.format(self.id, self.x, self.y, self.mirror, self.left, self.coefficient)
+        return 'F{0}[{1}, {2}]'.format(self.id, self.x, self.y)
+
+
+class Edge:
+    def __init__(self, start, end):
+        self.start = start
+        self.end = end
+
+    def start(self):
+        return self.start
+
+    def end(self):
+        return self.end
+
+    def __repr__(self):
+        return '({0}-{1})'.format(self.start, self.end)
 
 
 def fold(convex):
@@ -162,10 +183,11 @@ def fold(convex):
     convex_center = [sum(map(lambda v: v[0], convex)) / len(convex), sum(map(lambda v: v[1], convex)) / len(convex)]
     print("Convex center", convex_center)
 
-    points = [Point(0, 0, 0), Point(1, 0, 1), Point(2, 1, 1), Point(3, 1, 0)]
-
-    # WS edges contain edges
-    edges = [[i, (i + 1) % len(points)] for i in range(len(points))]
+    p00 = Point(0, 0, 0)
+    p01 = Point(0, 1, 0)
+    p11 = Point(1, 1, 0)
+    p10 = Point(1, 0, 0)
+    edges = [Edge(p00, p01), Edge(p01, p11), Edge(p11, p10), Edge(p10, p00)]
 
     iteration = 0
     no_progress = 0
@@ -174,21 +196,20 @@ def fold(convex):
         if iteration > 2:
             print("Iteration limit.", iteration - 1, "STOP")
             break
-
+        print()
         print("ITERATION", iteration, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        print("Points", len(points), points)
-        print("WS edges", len(edges), edges)
+        print("Edges", len(edges), edges)
 
         # Edge to try folding on
         fold_edge = (convex[iteration % len(convex)], convex[(iteration + 1) % len(convex)])
-        print("Edge", iteration % len(convex), fold_edge)
+        print("FOLD edge", iteration % len(convex), fold_edge)
 
         edges_new = []
         fold_points = []
-        n_points = len(points)
+        n_points = Point.counter
         for e in edges:
-            p0 = points[e[0]]
-            p1 = points[e[1]]
+            p0 = e.start
+            p1 = e.end
             p0_inside = check_boundary(fold_edge, convex_center, p0.coords())
             p1_inside = check_boundary(fold_edge, convex_center, p1.coords())
 
@@ -198,13 +219,15 @@ def fold(convex):
                 continue
             if not p0_inside and not p1_inside:
                 # This edge should be mirrored
-                p0_mirror = mirror(p0.x, p0.y, fold_edge[0][0], fold_edge[0][1], fold_edge[1][0], fold_edge[1][1])
-                p1_mirror = mirror(p1.x, p1.y, fold_edge[0][0], fold_edge[0][1], fold_edge[1][0], fold_edge[1][1])
+                p0_mirror_coords = mirror(p0.x, p0.y, fold_edge[0][0], fold_edge[0][1], fold_edge[1][0],
+                                          fold_edge[1][1])
+                p1_mirror_coords = mirror(p1.x, p1.y, fold_edge[0][0], fold_edge[0][1], fold_edge[1][0],
+                                          fold_edge[1][1])
                 # Add new edges and set origin
-                points.append(Mirror(len(points), p0_mirror[0], p0_mirror[1], e[0]))
-                points.append(Mirror(len(points), p1_mirror[0], p1_mirror[1], e[0]))
+                p0_mirror = Mirror(p0_mirror_coords[0], p0_mirror_coords[1], iteration, p0)
+                p1_mirror = Mirror(p1_mirror_coords[0], p1_mirror_coords[1], iteration, p1)
                 # New edge ids
-                edges_new.append([len(points) - 2, len(points) - 1])
+                edges_new.append(Edge(p0_mirror, p1_mirror))
                 print("Edge", e, "mirrored to", edges_new[len(edges_new) - 1])
 
             # Simmerty trick
@@ -212,35 +235,38 @@ def fold(convex):
                 t = p0
                 p0 = p1
                 p1 = t
-                t = e[0]
-                e[0] = e[1]
-                e[1] = t
-                p0_inside = check_boundary(fold_edge, convex_center, p0.coords())
-                p1_inside = check_boundary(fold_edge, convex_center, p1.coords())
+                p0_inside = False
+                p1_inside = True
 
             if not p0_inside and p1_inside:
                 # p1 should be left intact, p0 should be mirrored + new fold point added
-                p0_mirror = mirror(p0.x, p0.y, fold_edge[0][0], fold_edge[0][1], fold_edge[1][0], fold_edge[1][1])
-                p_fold = line_intersection(fold_edge, [p0.coords(), p1.coords()])
-                p_fold_coeff = length([p0.coords(), p_fold]) / length([p0.coords(), p1.coords()])
-                points.append(Mirror(len(points), p0_mirror[0], p0_mirror[1], e[0]))
-                points.append(Fold(len(points), p_fold[0], p_fold[1], e[0], e[1], p_fold_coeff))
-                fold_points.append(points[len(points) - 1])
-                # New edges ids
-                edges_new.append([len(points) - 2, len(points) - 1])
-                edges_new.append([e[1], len(points) - 1])
-                print("Edge", e, "mirrored to",
-                      edges_new[len(edges_new) - 1], "and",
-                      edges_new[len(edges_new) - 2])
+                p0_mirror_coords = mirror(p0.x, p0.y,
+                                          fold_edge[0][0], fold_edge[0][1],
+                                          fold_edge[1][0], fold_edge[1][1])
+                p0_mirror = Mirror(p0_mirror_coords[0], p0_mirror_coords[1], iteration, p0)
+                fold_coords = line_intersection(fold_edge, [p0.coords(), p1.coords()])
+                if fold_coords == p1.coords():
+                    fold_point = p1
+                else:
+                    coefficient = length([p0.coords(), fold_coords]) / length([p0.coords(), p1.coords()])
+                    fold_point = Fold(fold_coords[0], fold_coords[1], iteration, p0, p1, coefficient)
+                fold_points.append(fold_point)
+                # New edges
+                edges_new.append(Edge(fold_point, p0_mirror))
+                if fold_point != p1:
+                    edges_new.append(Edge(fold_point, p1))
+                    print("Edge", e, "mirrored to", edges_new[len(edges_new) - 1], "and", edges_new[len(edges_new) - 2])
+                else:
+                    print("Edge", e, "mirrored to", edges_new[len(edges_new) - 1])
 
-        print("Fold points", fold_points)
+        print("New fold points", fold_points)
         # Add edges combined of new folded points
         for i in fold_points:
             for j in fold_points:
                 if i != j:
-                    edges_new.append([i.id, j.id])
+                    edges_new.append(Edge(i, j))
 
-        if n_points == len(points):
+        if n_points == Point.counter:
             print("Edge", iteration % len(convex), "nothing changed")
             no_progress += 1
         else:
@@ -250,82 +276,83 @@ def fold(convex):
         if no_progress == len(convex):
             print("No progress for", no_progress, "steps. STOP.")
             break
-        visualize(iteration, edges, points)
+        visualize("fold_{}".format(iteration), edges)
 
-    print("Points", len(points), points)
-    print("WS edges", len(edges), edges)
+    print()
+    print("Edges", len(edges), edges)
     print("RESULT found in", iteration, "iterations")
 
     # Backtrace
-    # backtrace(points, edges)
+    backtrace(edges, iteration)
 
 
-def visualize(iteration, edges, points):
-    print("Visualize", iteration, edges, points)
-    coords = [[points[e[0]].coords(), points[e[1]].coords()] for e in edges]
-
+def visualize(iteration, edges):
+    # print("Visualize", iteration, edges)
+    coords = [[e.start.coords(), e.end.coords()] for e in edges]
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.add_collection(LineCollection(coords))
-    ax.autoscale()
     ax.margins(0.1)
-    plt.xlim((-1.5, 1.5))
-    plt.ylim((-1.5, 1.5))
-    plt.savefig("out/viz_{0}.png".format(iteration))
+    plt.xlim((-0.5, 1.5))
+    plt.ylim((-0.5, 1.5))
+    plt.savefig("out/{0}.png".format(iteration))
 
 
-def backtrace(points, edges):
-    print("Backtrace", points, edges)
+def is_fold_point(p):
+    return type(p) is Fold
 
-    def is_fold_point(p):
-        return type(points[p]) is Fold
 
-    def is_mirror_point(p):
-        return type(points[p]) is Mirror
+def is_mirror_point(p):
+    return type(p) is Mirror
 
-    print("Fold points", [i for i in range(len(points)) if is_fold_point(i)])
-    print("Mirror points", [i for i in range(len(points)) if is_mirror_point(i)])
-    print("Start edges", edges)
-    iteration = 1
-    while True:
+
+def backtrace(edges, iterations):
+    print("Backtrace", edges)
+    iteration = iterations
+    while iteration > 0:
         print()
+        iteration -= 1
         print("Backtrace iteration", iteration)
-        iteration += 1
         edges_prev = []
-        edges_number = len(edges)
-        for e in edges:
-            p0 = e[0]
-            p1 = e[1]
+
+        for e in [e for e in edges if e.start.z == iteration or e.end.z == iteration]:
+            p0 = e.start
+            p1 = e.end
             # We deal only with fold edges
-            if is_fold_point(p0) and is_fold_point(p1):
-                fp0 = points[p0]
-                fp1 = points[p1]
-                print("Fold edge processing", e, fp0, fp1)
-
-                # Add original edge
-                edges_prev.append(e)
-                print("Added edge to prev generation", e)
-
-                # Compute duplicated edge
-                p0_duplicated = p0
-                p1_duplicated = p1
-
-                if is_fold_point(fp0.mirror):
-                    points.append(Fold(len(points), p0, 666, 666, fp0.mirror, fp0.left))
-                    p0_duplicated = len(points) - 1
-
-                if is_fold_point(fp1.mirror):
-                    points.append(Fold(len(points), p1, 666, 666, fp1.mirror, fp1.left))
-                    p1_duplicated = len(points) - 1
-
+            if is_fold_point(p0) or is_fold_point(p1):
+                print("Fold edge", e)
+                p0_duplicated = duplicate_fold_point(p0, iteration - 1)
+                p1_duplicated = duplicate_fold_point(p1, iteration - 1)
                 if p0_duplicated != p0 or p1_duplicated != p1:
-                    edges_prev.append([p0_duplicated, p1_duplicated])
+                    edges_prev.append(Edge(p0_duplicated, p1_duplicated))
+                    print("Duplicated edge to prev generation", edges_prev[len(edges_prev) - 1])
+                else:
+                    edges_prev.append(e)
+                    print("Edge to prev generation", e)
+        edges = edges_prev
+        visualize("unfold_{}".format(iteration), edges)
+    print("Edges", edges)
 
-        if edges_number != len(edges_prev):
-            edges = edges_prev
-            print("Edges", edges)
-        else:
-            break
+
+def multiply(k, p):
+    return p[0] * k, p[1] * k
+
+
+def plus(p0, p1):
+    return p0[0] + p1[0], p0[1] + p1[1]
+
+
+def minus(p0, p1):
+    return p0[0] - p1[0], p0[1] - p1[1]
+
+
+def duplicate_fold_point(p, iteration):
+    if not is_fold_point(p):
+        return p
+    if is_mirror_point(p.end):
+        x, y = minus(p.coords(), multiply(p.coefficient / (1 - p.coefficient), minus(p.end.coords(), p.coords())))
+        return Fold(x, y, iteration, p.start, p.end.source, p.coefficient)
+    return p
 
 
 if __name__ == "__main__":
