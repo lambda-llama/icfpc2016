@@ -14,8 +14,11 @@ let compare = Tuple2.compare ~cmp1:Vertex.compare ~cmp2:Vertex.compare
 and hash = Hashtbl.hash
 
 let twin (a, b) = (b, a)
+[@@inline]
 
 let eq (a, b) (c, d) = Vertex.eq a c && Vertex.eq b d
+[@@inline]
+
 let eq_unordered (a, b) (c, d) =
   (Vertex.eq a c && Vertex.eq b d) ||
   (Vertex.eq a d && Vertex.eq b c)

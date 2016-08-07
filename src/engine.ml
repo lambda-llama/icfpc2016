@@ -5,8 +5,6 @@ open Internal
 
 module VT = Hashtbl.Make(Vertex)
 
-[@@@landmark "auto"]
-
 let map_src_dst src dst =
   let src_dst_map = VT.create () in
   let ps = List.zip_exn (Figure.vertices src) (Figure.vertices dst) in

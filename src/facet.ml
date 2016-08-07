@@ -3,8 +3,6 @@ open Core_kernel.Std
 
 open Internal
 
-[@@@landmark "auto"]
-
 type t = {segments: Segment.t list; area: coord}
 [@@deriving show]
 
@@ -23,7 +21,21 @@ let _segment_area =
   let hashable = Hashtbl.Hashable.of_key(module Vertex2) in
   Memo.general ~hashable go
 
+(** Checks that all facet segments are consecutive. *)
+let _is_proper = function
+| [] | [_] -> true
+| ((first, _)::_)  as ss ->
+  let rec go acc = function
+  | [] -> failwith "Facet.is_proper: impossible"
+  | [(_, last)] -> (acc, last)
+  | (_a, b)::(((c, _d)::_) as rest) ->
+    go (acc && Vertex.eq b c) rest
+  in
+
+  let (acc, last) = go true ss in acc && Vertex.eq first last
+
 let create ss =
+  assert (_is_proper ss);
   (* http://mathworld.wolfram.com/PolygonArea.html *)
   let s = List.fold_left ss ~init:(n 0)
       ~f:(fun acc ab -> acc +/ _segment_area ab)
@@ -38,19 +50,6 @@ let compare {segments=ss1; area=a1} {segments=ss2; area=a2} =
 
 let eq {segments=ss1; area=a1} {segments=ss2; area=a2} =
   eq_num a1 a2 && List.equal ~equal:Segment.eq ss1 ss2
-
-(** Checks that all facet segments are consecutive. *)
-let is_proper {segments=ss; _} = match ss with
-| [] | [_] -> true
-| ((first, _)::_) ->
-  let rec go acc = function
-  | [] -> failwith "Facet.is_proper: impossible"
-  | [(_, last)] -> (acc, last)
-  | (_a, b)::(((c, _d)::_) as rest) ->
-    go (acc && Vertex.eq b c) rest
-  in
-
-  let (acc, last) = go true ss in acc && Vertex.eq first last
 
 let rec fix (ss : Segment.t list): Segment.t list =
   let merge_segments (a, b) (b', c) =
@@ -69,9 +68,6 @@ let rec fix (ss : Segment.t list): Segment.t list =
     end
 
 let merge ({segments=ss1; _} as f1) ({segments=ss2; _} as f2): t =
-  assert (is_proper f1);
-  assert (is_proper f2);
-
   let split_on_edge f on =
     let (l, r) = List.split_while f ~f:(Segment.neq on) in
     (l, List.tl_exn r)
@@ -96,11 +92,6 @@ let intersects {segments=ss1; _} {segments=ss2; _} = List.exists ss1
 let vertices {segments=ss; _} = List.map ~f:fst ss
 and segments {segments=ss; _} = ss
 
-let mem {segments=ss; _} = List.mem ~equal:Segment.eq ss
-let mem_unordered {segments=ss; _} = List.mem ~equal:Segment.eq_unordered ss
-
-let rev {segments=ss; _} = create @@ List.rev ss
-
 let map {segments=ss; _} ~f = create @@ List.map ~f ss
 
 let reflect {segments=ss; _} s =
@@ -108,5 +99,4 @@ let reflect {segments=ss; _} s =
       (Vertex.reflect b s, Vertex.reflect a s))
   in create reflected
 
-and quasi_reflect {segments=ss; _} =
-  create @@ List.rev_map ss ~f:Segment.twin
+and quasi_reflect {segments=ss; _} = create (List.rev_map ss ~f:Segment.twin)

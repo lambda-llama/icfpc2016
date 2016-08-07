@@ -3,8 +3,6 @@ open Core_kernel.Std
 
 open Internal
 
-[@@@landmark "auto"]
-
 type t = coord * coord [@@deriving show]
 
 let to_string (x, y) = string_of_num x ^ "," ^ string_of_num y
@@ -19,6 +17,8 @@ let compare = Tuple2.compare ~cmp1:compare_num ~cmp2:compare_num
 and hash = Hashtbl.hash
 
 let eq (x1, y1) (x2, y2) = eq_num x1 x2 && eq_num y1 y2
+[@@inline]
+
 let neq x1y1 x2y2 = not (eq x1y1 x2y2)
 
 let sub (x1, y1) (x2, y2) = (x1 -/ x2, y1 -/ y2)

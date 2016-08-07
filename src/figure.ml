@@ -3,8 +3,6 @@ open Core_kernel.Std
 
 open Internal
 
-[@@@landmark "auto"]
-
 type t = Facet.t list [@@deriving show]
 
 let compare: t -> t -> int = List.compare Facet.compare
@@ -73,22 +71,16 @@ let of_skeleton (skel: Segment.t list): t =
   let result = ref [] in begin
     while not (List.is_empty !half_edges) do
       let next = List.hd_exn !half_edges in
-      let f = Facet.create (poly_of_segment next) in
+      let ss = List.rev @@ poly_of_segment next in
       begin
         half_edges := List.filter !half_edges
-            ~f:(fun e -> not (Facet.mem f e));
+            ~f:(fun e -> not (List.mem ~equal:Segment.eq ss e));
 
+        let f = Facet.create ss in
         if Facet.area f >/ n 0 then
-          result := Facet.rev f::!result
+          result := f::!result
       end
-    done;
-
-    match List.filter !result ~f:(fun f -> not (Facet.is_proper f)) with
-    | [] -> !result
-    | improper ->
-      let debug = sprintf "\n%s"
-          (String.concat ~sep:"\n" @@ List.map improper ~f:Facet.show)
-      in failwith ("Figure.of_skeleton: improper facets found:" ^ debug)
+    done; !result
   end
 
 let vertices f = List.concat_map f ~f:Facet.vertices
@@ -99,7 +91,8 @@ let segments f =
 (** Unfolds a given segment [s] of a figure [f]. *)
 let unfold (dst : t) (src : t) s =
   let mapper = List.zip_exn src dst in
-  let targets = List.filter src ~f:(fun target -> Facet.mem_unordered target s)
+  let targets = List.filter src ~f:(fun target ->
+      List.mem ~equal:Segment.eq_unordered (Facet.segments target) s)
   in match targets with
   | [target] ->
      let neighbours = List.filter src ~f:(fun other ->
