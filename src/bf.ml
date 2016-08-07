@@ -39,7 +39,7 @@ let mk_rot cos sin =
   fun (x, y) -> (x */ cos -/ y */ sin, x */ sin +/ y */ cos)
 
 
-let closest_angle ((x1, y2), (x2, y1)) =
+let closest_angle ((x1, y1), (x2, y2)) =
   let f = float_of_num in
   let dx = (f x2) -. (f x1)
   and dy = (f y2) -. (f y1) in
