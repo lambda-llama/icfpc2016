@@ -10,13 +10,14 @@ from scipy.spatial import ConvexHull
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from math import sqrt
+from fractions import Fraction
 
 
 def parse_vertex(s):
     if "/" in s:
-        return float(s.split("/")[0]) / int(s.split("/")[1])
+        return Fraction(int(s.split("/")[0]), int(s.split("/")[1]))
     else:
-        return float(s)
+        return Fraction(float(s))
 
 
 def length(edge):
@@ -183,10 +184,10 @@ def fold(convex):
     convex_center = [sum(map(lambda v: v[0], convex)) / len(convex), sum(map(lambda v: v[1], convex)) / len(convex)]
     print("Convex center", convex_center)
 
-    p00 = Point(0, 0, 0)
-    p01 = Point(0, 1, 0)
-    p11 = Point(1, 1, 0)
-    p10 = Point(1, 0, 0)
+    p00 = Point(Fraction(0), Fraction(0), 0)
+    p01 = Point(Fraction(0), Fraction(1), 0)
+    p11 = Point(Fraction(1), Fraction(1), 0)
+    p10 = Point(Fraction(1), Fraction(0), 0)
     edges = [Edge(p00, p01), Edge(p01, p11), Edge(p11, p10), Edge(p10, p00)]
 
     iteration = 0
@@ -202,7 +203,7 @@ def fold(convex):
 
         # Edge to try folding on
         fold_edge = (convex[iteration % len(convex)], convex[(iteration + 1) % len(convex)])
-        print("FOLD edge", iteration % len(convex), fold_edge)
+        print("FOLD edge", iteration % len(convex), Point(*fold_edge[0], 0), Point(*fold_edge[1], 0))
 
         edges_new = []
         fold_points = []
@@ -309,12 +310,11 @@ def is_mirror_point(p):
 def backtrace(edges, iterations):
     print("Backtrace", edges)
     iteration = iterations
+    result = []
     while iteration > 0:
         print()
         iteration -= 1
         print("Backtrace iteration", iteration)
-        edges_prev = []
-
         for e in [e for e in edges if e.start.z == iteration or e.end.z == iteration]:
             p0 = e.start
             p1 = e.end
@@ -324,14 +324,13 @@ def backtrace(edges, iterations):
                 p0_duplicated = duplicate_fold_point(p0, iteration - 1)
                 p1_duplicated = duplicate_fold_point(p1, iteration - 1)
                 if p0_duplicated != p0 or p1_duplicated != p1:
-                    edges_prev.append(Edge(p0_duplicated, p1_duplicated))
-                    print("Duplicated edge to prev generation", edges_prev[len(edges_prev) - 1])
+                    result.append(Edge(p0_duplicated, p1_duplicated))
+                    print("Duplicated edge to prev generation", result[len(result) - 1])
                 else:
-                    edges_prev.append(e)
+                    result.append(e)
                     print("Edge to prev generation", e)
-        edges = edges_prev
-        visualize("unfold_{}".format(iteration), edges)
-    print("Edges", edges)
+        visualize("unfold_{}".format(iteration), result)
+    print("Edges", result)
 
 
 def multiply(k, p):
