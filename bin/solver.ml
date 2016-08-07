@@ -13,6 +13,6 @@ let () =
     let (_shade, skeleton) = Input.problem_of_string s in
     let dst = Figure.of_skeleton skeleton in begin
       prerr_endline @@ Figure.show dst;
-      Out_channel.write_all out_path ~data:(Engine.search dst)
+      Out_channel.write_all out_path ~data:(Bf.bf_solve dst)
     end
   | _other -> prerr_endline "usage: %prog PROBLEM_ID"
