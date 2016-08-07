@@ -1,5 +1,6 @@
 open Num
 open Core_kernel.Std
+open Parmap
 
 open Internal
 
@@ -38,9 +39,11 @@ let search dst: string =
       printf "iter %04d: %d extra solutions found\n" iter (List.length rest);
       solution
     | _other ->
-      let new_candidates = List.concat_map candidates ~f:(fun (dst, src) ->
-          List.concat_map (segments src) ~f:(unfold dst src))
+      let new_candidates = parmap
+          (fun (dst, src) -> List.concat_map (segments src) ~f:(unfold dst src))
+          (L candidates)
       in begin
-        go (succ iter) (List.dedup ~compare:compare_src new_candidates)
+        go (succ iter) (List.dedup ~compare:compare_src
+                          (List.concat_no_order new_candidates))
       end
   in go 1 [(dst, dst)]
