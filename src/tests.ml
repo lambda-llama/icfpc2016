@@ -142,4 +142,21 @@ module Engine_tests = struct
     end
 end
 
+
+module Convex_tests = struct
+  let () as _test_convex1 = begin
+    let a = (0., 0.)
+    and b = (2., 0.)
+    and c = (2., 2.)
+    and d = (1., 1.)
+    and e = (0., 2.) in
+
+    let contour = [a; b; c; d; e] in
+    let contour_convex = Convexhull.of_vertices contour in begin
+      assert (contour_convex = [a; b; c; e]);
+    end
+  end
+end
+
+
 let run () = ()

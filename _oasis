@@ -17,6 +17,7 @@ Library origami
   Modules:            Vertex,
                       Segment,
                       Facet,
+                      Convexhull,
                       Figure,
                       Input,
                       Output,
