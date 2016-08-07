@@ -27,6 +27,27 @@ let next_cc_segment in_seg out_segs =
   Option.value_exn (List.max_elt out_segs ~cmp:(fun x y ->
       Pervasives.compare (angle in_seg x) (angle in_seg y)))
 
+let rec inner_intersections segs =
+  let aux x xs =
+    let f (c, d) =
+      let (a, b) = x in
+      let v = Vertex.sub b a in
+      let (ux, uy) = Vertex.sub d c in
+      let o = (uy, n 0 -/ ux) in
+      (* a + t v = c + ? u *)
+      assert (Vertex.dot o (ux, uy) =/ n 0);
+      let l = Vertex.dot o v in
+      let k = Vertex.dot o (Vertex.sub c a) in
+      if l =/ n 0
+      then None
+      else Some(Vertex.add a (Vertex.scale (Num.div_num k l) v))
+    in
+    List.filter_map xs ~f
+  in
+  match segs with
+  | [] -> []
+  | x::xs -> aux x xs @ inner_intersections xs
+
 let split_segments segs =
   let is_between b e mid =
     if Vertex.eq b mid || Vertex.eq e mid
@@ -37,7 +58,7 @@ let split_segments segs =
       let d = (Vertex.dot v1 v2) in
       d </ n 0 && d */ d =/ Vertex.dot v1 v1 */ Vertex.dot v2 v2 in
   let vertecies = List.dedup ~compare:Vertex.compare
-      (List.concat_map segs ~f:(fun (a, b) -> [a; b])) in
+      (inner_intersections segs @ List.concat_map segs ~f:(fun (a, b) -> [a; b])) in
   let rec go segs =
     match segs with
     | [] -> []

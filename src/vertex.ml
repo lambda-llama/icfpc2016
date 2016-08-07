@@ -24,7 +24,13 @@ let neq x1y1 x2y2 = not (eq x1y1 x2y2)
 let sub (x1, y1) (x2, y2) = (x1 -/ x2, y1 -/ y2)
 [@@inline]
 
+let add (x1, y1) (x2, y2) = (x1 +/ x2, y1 +/ y2)
+[@@inline]
+
 let dot (x1, y1) (x2, y2) = x1 */ x2 +/ y1 */ y2
+[@@inline]
+
+let scale f (x, y) = (x */ f, y */ f)
 [@@inline]
 
 module Vertex3 = struct
