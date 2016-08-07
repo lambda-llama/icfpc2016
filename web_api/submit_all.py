@@ -8,11 +8,12 @@ from api import submit_solution
 
 if __name__ == '__main__':
     try:
-        [prob_fst, prob_last] = map(int, sys.argv[1:])
+        solver = sys.argv[1]
+        [prob_fst, prob_last] = map(int, sys.argv[2:])
     except ValueError:
-        sys.exit("usage: %prog ID_START ID_END")
+        sys.exit("usage: %prog SOLVER ID_START ID_END")
 
-    for i in range(prob_fst, prob_last):
+    for i in range(prob_fst, prob_last + 1):
         print("problem {:04d}:".format(i), end=" ")
         if not os.path.exists("problems/problem{}.txt".format(i)):
             print("SKIP")
@@ -23,7 +24,7 @@ if __name__ == '__main__':
             print("Skip soln already exists")
             continue
         try:
-            subprocess.check_call(["./solver_bf.native", str(i)],
+            subprocess.check_call([solver, str(i)],
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.PIPE,
                                   timeout=5)
@@ -33,7 +34,8 @@ if __name__ == '__main__':
 
         response = submit_solution(i, solution_path).json()
         if response["ok"]:
-            print("OK " + solution_path)
+            print("OK {} resemblance: {}".format(
+                solution_path, response["resemblance"]))
         else:
             os.remove(solution_path)
             print("ERROR " + response["error"])
