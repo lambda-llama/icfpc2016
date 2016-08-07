@@ -16,19 +16,21 @@ if __name__ == '__main__':
     for i in range(prob_fst, prob_last + 1):
         print("problem {:04d}:".format(i), end=" ")
         if not os.path.exists("problems/problem{}.txt".format(i)):
-            print("SKIP")
+            print("SKIP problem missing")
             continue
 
         solution_path = "solutions/solution{}.txt".format(i)
         if os.path.exists(solution_path):
-            print("Skip soln already exists")
+            print("SKIP solution exists")
             continue
+
         try:
             subprocess.check_call([solver, str(i)],
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.PIPE,
                                   timeout=5)
-        except subprocess.TimeoutExpired:
+        except (subprocess.TimeoutExpired,
+                subprocess.CalledProcessError):
             print("FAILED")
             continue
 
