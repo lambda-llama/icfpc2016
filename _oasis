@@ -11,13 +11,34 @@ BuildDepends:   core_kernel,
 
 Library origami
   Path:               src
-  BuildDepends:       ppx_deriving.std
-  Modules:            Types,
-                      Input
+  BuildDepends:       ppx_deriving.std,
+                      landmarks,
+                      landmarks.ppx
+  Modules:            Vertex,
+                      Segment,
+                      Facet,
+                      Figure,
+                      Input,
+                      Output,
+                      Engine,
+                      Tests
+  InternalModules:    Internal
   CompiledObject:     best
 
-Executable folder
+Executable main
   Path:               bin
   BuildDepends:       origami
   MainIs:             main.ml
+  CompiledObject:     best
+
+Executable solver
+  Path:               bin
+  BuildDepends:       origami
+  MainIs:             solver.ml
+  CompiledObject:     best
+
+Executable test_runner
+  Path:               bin
+  BuildDepends:       origami
+  MainIs:             test_runner.ml
   CompiledObject:     best

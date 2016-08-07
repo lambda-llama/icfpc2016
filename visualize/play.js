@@ -1,15 +1,277 @@
+function compute(t, n, data) {
+    if (t) {
+        var point = minus(n, t);
+        var x = W(plus(t, n), [2, 0]);
+        var l;
+        var b;
+
+        x = point[0] * x[0] + point[1] * x[1];
+        if (point[0]) {
+            l = [x / point[0], 0];
+            b = [(x - point[1]) / point[0], 1];
+        } else {
+            if (!point[1]) {
+                return;
+            }
+
+            l = [0, x / point[1]];
+            b = [1, x / point[1]];
+        }
+        if (distance_and_product(minus(n, t), flip_y(minus(l, t)))[1] >= 0) {
+            x = l;
+            l = b;
+            b = x;
+        }
+        x = fold(CURRENT_STATE.concat().reverse(), [], function (log, data) {
+            var matched = C(data[1], [[], []], function (kv, a, data) {
+                var err = add(kv[0], a);
+                var typePattern = minus(b, l);
+                var n = W(minus(data[1], a[1]), typePattern);
+                if (n[1] != 0 && (n = W(minus(a[1], l), typePattern)[1] / -n[1], 0 <= n && n < 1)) {
+                    n = plus(a[1], distance_and_product(minus(data[1], a[1]), [n, 0]));
+                    n = [plus(distance_and_product(minus(data[0], a[0]), W(minus(n, a[1]), minus(data[1], a[1]))), a[0]), n];
+                    return [add(kv[1], n), add(err, n)];
+                } else {
+                    return [err, kv[1]];
+                }
+            });
+            matched = matched[1].length
+                ? (distance_and_product(minus(b, l), flip_y(minus(matched[0][0][1], l)))[1] >= 0 && (matched = matched.reverse()),
+                map(matched, function (e) {
+                    return [data[0], C(e, [], function (a, b, data) {
+                        if (b[1][0] == data[1][0] && (b[1][1] == data[1][1] && (b[0][0] == data[0][0] && b[0][1] == data[0][1]))) {
+                            return a;
+                        } else {
+                            return add(a, b);
+                        }
+                    })];
+                }))
+                : distance_and_product(minus(b, l), flip_y(minus(data[1][0][1], l)))[1] >= 0
+                ? [0, data]
+                : [data];
+            if (matched[0]) {
+                log.unshift(matched[0]);
+            }
+            if (matched[1]) {
+                var y = minus(b, l);
+                y = W(y, flip_y(y));
+                log = add(log, [!matched[1][0], map(matched[1][1], function (dataAndEvents) {
+                    return [dataAndEvents[0], plus(distance_and_product(flip_y(minus(dataAndEvents[1], l)), y), l)];
+                })]);
+            }
+            return log;
+        });
+        if (data) {
+            draw(x);
+            var _ctx = $("#dst")[0].getContext("2d");
+            apply([t, n], function (dataAndEvents) {
+                _ctx.fillStyle = "#000000";
+                _ctx.fillRect(dataAndEvents[0] - 1 / (SIZE / 2), dataAndEvents[1] - 1 / (SIZE / 2), 1 / (SIZE / 4), 1 / (SIZE / 4));
+            });
+        } else {
+            CURRENT_STATE = x;
+            draw(CURRENT_STATE);
+        }
+    }
+}
+function draw(state) {
+    draw_canvas(state, 1);
+    draw_canvas(state, 0);
+}
+
+function init() {
+    if (LOADED) {
+        $.map(PROBLEMS, function (deepDataAndEvents, dataAndEvents) {
+            $("#origami #silhouette-list").append('<li data-silhouette-id="' + dataAndEvents + '"><a href="#">' + dataAndEvents + "</a></li>");
+        });
+
+        apply([0, 1], function (dst_or_src) {
+
+            var target = "#origami #" + (dst_or_src ? "silhouette" : "texture");
+
+            var canvas = $(dst_or_src ? "#dst" : "#src");
+            var h = canvas.height() / 2 + SIZE / 2;
+            var delta = canvas.width() / 2 - SIZE / 2;
+
+            var move_result = 0;
+            $(target + " a").click(function (validClass) {
+                validClass.preventDefault();
+
+                validClass = "active";
+                $(target + " li").removeClass(validClass);
+                $(this).parent().addClass(validClass);
+                draw(CURRENT_STATE);
+            });
+            if (dst_or_src) {
+                var move = function (e) {
+                    var x = e.offsetX;
+                    var y = e.offsetY;
+                    var dragndrop = e.originalEvent.changedTouches;
+                    if (dragndrop) {
+                        var nodeOfs = $("#dst")[0].getBoundingClientRect();
+
+                        x = dragndrop[0].pageX - nodeOfs.left;
+
+                        y = dragndrop[0].pageY - nodeOfs.top;
+                    }
+                    return [(x - delta) / SIZE, (h - y) / SIZE];
+                };
+                var onMouseMove;
+                canvas.mousedown(onMouseMove = function (e) {
+                    $("#navi").remove();
+                    move_result = move(e);
+                    return false;
+                });
+                canvas.bind("touchstart", onMouseMove);
+                canvas.mousemove(onMouseMove = function (e) {
+                    compute(move_result, move(e), 1);
+                    return false;
+                });
+                canvas.bind("touchmove", onMouseMove);
+                canvas.mouseup(onMouseMove = function (e) {
+                    compute(move_result, move(e));
+
+                    move_result = 0;
+                    return false;
+                });
+                canvas.bind("touchend", onMouseMove);
+            }
+            canvas[0].getContext("2d").setTransform(SIZE, 0, 0, -SIZE, delta, h);
+        });
+        draw(CURRENT_STATE);
+    } else {
+        var im = new Image;
+        im.onload = function () {
+            init();
+        };
+        im.src = "/texture0.png";
+        LOADED = 1;
+    }
+}
+
+function draw_canvas(state, dst_or_src) {
+    // value = false, drawing on src
+    var context = $(dst_or_src ? "#dst" : "#src")[0].getContext("2d");
+    context.clearRect(-1, -1, 3, 3);
+    context.beginPath();
+
+    context.lineWidth = 0.001;
+
+    context.strokeStyle = "#000000";
+    context.stroke();
+
+    // TODO nothing works without this code
+    apply(state, function (objectTypes) {
+        context.beginPath();
+        var ab = objectTypes[1];
+        apply(ab, function (tagMap) {
+            context.lineTo(tagMap[dst_or_src][0], tagMap[dst_or_src][1]);
+        });
+        context.closePath();
+
+        // Textures painting is removed
+        context.lineWidth = 0.003;
+        context.strokeStyle = "#000000";
+        context.stroke();
+    });
+    // DRAW selected silhouette here
+    if (dst_or_src) {
+        var i = $("#origami #silhouette li.active").data("silhouette-id");
+        if (i = i ? PROBLEMS[i] : null) {
+            context.beginPath();
+            apply([i[0], i[1]], function (inplace) {
+                apply(inplace, function (inplace) {
+                    apply(inplace, function (pt) {
+                        context.lineTo(pt[0], pt[1]);
+                    });
+                    context.closePath();
+                });
+            });
+
+            context.fillStyle = "rgba(255,192,192,.8)";
+            context.fill();
+            context.beginPath();
+            apply(i[2], function (dataAndEvents) {
+                context.moveTo(dataAndEvents[0][0], dataAndEvents[0][1]);
+                context.lineTo(dataAndEvents[1][0], dataAndEvents[1][1]);
+            });
+
+            context.lineWidth = 0.005;
+
+            context.strokeStyle = "rgba(255,128,128,.8)";
+            context.stroke();
+        }
+    }
+}
+
 function fold(l, z, f) {
     for (var i = 0; i < l.length; i++) z = f(z, l[i]);
     return z;
 }
 
-function push(l, x) {
+function add(l, x) {
     l = l.concat();
     l.push(x);
     return l;
 }
 
-var problems = {
+function flip_y(a) {
+    return [a[0], -a[1]];
+}
+
+function minus(a, b) {
+    return [a[0] - b[0], a[1] - b[1]];
+}
+function plus(a, b) {
+    return [a[0] + b[0], a[1] + b[1]];
+}
+
+function C(n, m, f) {
+    m = fold(n, [m], function (m, val) {
+        return [m[1] ? f(m[0], m[1], val) : m[0], val];
+    });
+    return f(m[0], m[1], n[0]);
+}
+
+function W(a, b) {
+    var d = b[0] * b[0] + b[1] * b[1];
+    return [(b[0] * a[0] + b[1] * a[1]) / d, (b[0] * a[1] - b[1] * a[0]) / d];
+}
+
+function distance_and_product(a, b) {
+    return [a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]];
+}
+
+function apply(data, f) {
+    fold(data, 0, function (dataAndEvents, outErr) {
+        f(outErr);
+    });
+}
+
+function map(values, f) {
+    return fold(values, [], function (err, x) {
+        return add(err, f(x));
+    });
+}
+
+// See size of canvas elements
+var SIZE = 480;
+
+
+var CURRENT_STATE = [[false,
+    [
+        [[0, 0], [0, 0]],
+        [[1, 0], [1, 0]],
+        [[1, 1], [1, 1]],
+        [[0, 1], [0, 1]]
+    ]]];
+
+var LOADED = 0;
+$(function () {
+    init();
+});
+
+var PROBLEMS = {
     sample: [
         [
             [[0, 0], [1, 0], [.5, .5], [0, .5]] // Polygon 1
@@ -42,371 +304,10 @@ var problems = {
     problem92: [[[[0.0, 0.0], [0.0625, 0.0], [0.0625, 0.0625], [0.125, 0.0625], [0.1875, 0.125], [0.1875, 0.1875], [0.25, 0.1875], [0.3125, 0.25], [0.3125, 0.3125], [0.375, 0.3125], [0.4375, 0.375], [0.4375, 0.4375], [0.5, 0.4375], [0.5625, 0.5], [0.4375, 0.5], [0.375, 0.4375], [0.375, 0.375], [0.3125, 0.375], [0.25, 0.3125], [0.25, 0.25], [0.1875, 0.25], [0.125, 0.1875], [0.125, 0.125], [0.0625, 0.125], [0.0, 0.0625]]], [], [[[0.125, 0.0625], [0.1875, 0.125]], [[0.25, 0.1875], [0.3125, 0.25]], [[0.375, 0.3125], [0.4375, 0.375]], [[0.5, 0.4375], [0.5625, 0.5]], [[0.0, 0.0], [0.0625, 0.0]], [[0.0, 0.0], [0.0, 0.0625]], [[0.0625, 0.0], [0.0625, 0.125]], [[0.125, 0.0625], [0.125, 0.1875]], [[0.1875, 0.125], [0.1875, 0.25]], [[0.25, 0.1875], [0.25, 0.3125]], [[0.3125, 0.25], [0.3125, 0.375]], [[0.375, 0.3125], [0.375, 0.4375]], [[0.4375, 0.375], [0.4375, 0.5]], [[0.5, 0.4375], [0.5, 0.5]], [[0.0, 0.0625], [0.0625, 0.125]], [[0.125, 0.1875], [0.1875, 0.25]], [[0.25, 0.3125], [0.3125, 0.375]], [[0.375, 0.4375], [0.4375, 0.5]], [[0.0, 0.0625], [0.125, 0.0625]], [[0.0625, 0.125], [0.1875, 0.125]], [[0.125, 0.1875], [0.25, 0.1875]], [[0.1875, 0.25], [0.3125, 0.25]], [[0.25, 0.3125], [0.375, 0.3125]], [[0.3125, 0.375], [0.4375, 0.375]], [[0.375, 0.4375], [0.5, 0.4375]], [[0.4375, 0.5], [0.5625, 0.5]]]],
 
     problem101: [[[[0.4477340095233139, 0.0], [0.723707409077863, 0.37895583823207246], [0.48579122237726957, 0.1631839504071303], [0.4958294381809143, 0.20622640115527413], [0.36633559488004475, 0.5421272776225402], [0.3656361474435197, 0.5428616974308916], [0.36490172763516826, 0.5421622499943665], [0.21918619338084214, 0.21297379736991007], [0.22711408968808064, 0.1694931487654031], [0.1, 0.2966072384534838], [0.06561154618885565, 0.2966072384534838], [0.0, 0.19660723845348382], [0.0792354732489911, 0.2758427117024749], [0.25717059008122034, 0.004647888279075363], [0.35344827586206895, 0.04315896259141483]]], [], [[[0.4477340095233139, 0.0], [0.4958294381809143, 0.20622640115527413]], [[0.4477340095233139, 0.0], [0.723707409077863, 0.37895583823207246]], [[0.36150853125575666, 0.039469409066135275], [0.36333131241636674, 0.08412161237481386]], [[0.35380314109983113, 0.042996524278354764], [0.36633559488004475, 0.5421272776225402]], [[0.35344827586206895, 0.04315896259141483], [0.3585017835909632, 0.2503527794760759]], [[0.3530859134713964, 0.043014017635145785], [0.36490172763516826, 0.5421622499943665]], [[0.3452177333825992, 0.039866745599626996], [0.34557398089834634, 0.08455471802159487]], [[0.21918619338084214, 0.21297379736991007], [0.36490172763516826, 0.5421622499943665]], [[0.25717059008122034, 0.004647888279075363], [0.21918619338084214, 0.21297379736991007]], [[0.36150853125575666, 0.039469409066135275], [0.723707409077863, 0.37895583823207246]], [[0.35380314109983113, 0.042996524278354764], [0.723707409077863, 0.37895583823207246]], [[0.35344827586206895, 0.04315896259141483], [0.723707409077863, 0.37895583823207246]], [[0.36333131241636674, 0.08412161237481386], [0.4958294381809143, 0.20622640115527413]], [[0.0, 0.19660723845348382], [0.06561154618885565, 0.2966072384534838]], [[0.23399186461957835, 0.13177190426523333], [0.3585017835909632, 0.2503527794760759]], [[0.4958294381809143, 0.20622640115527413], [0.36633559488004475, 0.5421272776225402]], [[0.0, 0.19660723845348382], [0.09676998835229561, 0.2966072384534838]], [[0.0, 0.19660723845348382], [0.0998565279770445, 0.2966072384534838]], [[0.0, 0.19660723845348382], [0.1, 0.2966072384534838]], [[0.36490172763516826, 0.5421622499943665], [0.3656361474435197, 0.5428616974308916]], [[0.25717059008122034, 0.004647888279075363], [0.06561154618885565, 0.2966072384534838]], [[0.25717059008122034, 0.004647888279075363], [0.35344827586206895, 0.04315896259141483]], [[0.24968736781080278, 0.0456897164463238], [0.34557398089834634, 0.08455471802159487]], [[0.36333131241636674, 0.08412161237481386], [0.4770826588018058, 0.12584286050469118]], [[0.3452177333825992, 0.039866745599626996], [0.09676998835229561, 0.2966072384534838]], [[0.3530859134713964, 0.043014017635145785], [0.0998565279770445, 0.2966072384534838]], [[0.35344827586206895, 0.04315896259141483], [0.1, 0.2966072384534838]], [[0.34557398089834634, 0.08455471802159487], [0.21918619338084214, 0.21297379736991007]], [[0.4770826588018058, 0.12584286050469118], [0.3585017835909632, 0.2503527794760759]], [[0.4572091839133352, 0.040628208736505966], [0.24968736781080278, 0.0456897164463238]], [[0.4477340095233139, 0.0], [0.35344827586206895, 0.04315896259141483]], [[0.4572091839133352, 0.040628208736505966], [0.36333131241636674, 0.08412161237481386]], [[0.34557398089834634, 0.08455471802159487], [0.23399186461957835, 0.13177190426523333]], [[0.36633559488004475, 0.5421272776225402], [0.3656361474435197, 0.5428616974308916]], [[0.06561154618885565, 0.2966072384534838], [0.1, 0.2966072384534838]]]],
+    problem1485JabberRu: [[[[0.5033680812744374, 0.0], [0.5208162716789927, 0.7124677748526707], [0.01956435578529451, 0.7333718260991546], [0.01742787412647101, 0.6833145648117155], [0.018789813555711965, 0.6832478175426834], [0.0, 0.014135431650135422], [0.007117433180533123, 0.013935562023930537], [0.007042969646841589, 0.01037246169582784]]], [], [[[0.5033680812744374, 0.0], [0.007042969646841589, 0.01037246169582784]], [[0.5033680812744374, 0.0], [0.0, 0.014135431650135422]], [[0.5033680812744374, 0.0], [0.5208162716789927, 0.7124677748526707]], [[0.021240005608806727, 0.658708533315712], [0.02238798007902451, 0.7161015169542501]], [[0.02243893492234208, 0.7066982466686985], [0.022516652666322055, 0.7161005788794945]], [[0.022154220663693654, 0.658708533315712], [0.022516652666322055, 0.7161005788794945]], [[0.007042969646841589, 0.01037246169582784], [0.02179175528748655, 0.7161058636720499]], [[0.02156451574620019, 0.729737053294567], [0.021615592411652465, 0.7332862819761369]], [[0.021839264490663046, 0.7289415781787879], [0.021850778864122712, 0.7332764738347632]], [[0.021839264490663046, 0.7289415781787879], [0.021937408802967902, 0.7332728610472133]], [[0.020208902498495697, 0.658708533315712], [0.5194997188250263, 0.658708533315712]], [[0.020208902498495697, 0.658708533315712], [0.020208902498495697, 0.710258533315712]], [[0.022154220663693654, 0.658708533315712], [0.02179175528748655, 0.7161058636720499]], [[0.02243893492234208, 0.7066982466686985], [0.02238798007902451, 0.7161015169542501]], [[0.021240005608806727, 0.658708533315712], [0.020208902498495697, 0.710258533315712]], [[0.021722053167534172, 0.7297295573085716], [0.021844086709655017, 0.733276752922255]], [[0.0, 0.014135431650135422], [0.020196640471790334, 0.7333454574987168]], [[0.018161128662155336, 0.6832786287511892], [0.01961269985060705, 0.7333698099735564]], [[0.01939077592717654, 0.6832183649868463], [0.021844086709655017, 0.733276752922255]], [[0.019420478372691306, 0.7298390714308878], [0.01956435578529451, 0.7333718260991546]], [[0.01742787412647101, 0.6833145648117155], [0.01956435578529451, 0.7333718260991546]], [[0.021722053167534172, 0.7297295573085716], [0.021937408802967902, 0.7332728610472133]], [[0.01742787412647101, 0.6833145648117155], [0.020196640471790334, 0.7333454574987168]], [[0.019420478372691306, 0.7298390714308878], [0.01961269985060705, 0.7333698099735564]], [[0.018161128662155336, 0.6832786287511892], [0.021615592411652465, 0.7332862819761369]], [[0.02156451574620019, 0.729737053294567], [0.021850778864122712, 0.7332764738347632]], [[0.5194997188250263, 0.658708533315712], [0.01742787412647101, 0.6833145648117155]], [[0.5206576097070319, 0.7059890776642718], [0.02243893492234208, 0.7066982466686985]], [[0.020208902498495697, 0.710258533315712], [0.3590599214724943, 0.7136470435054519]], [[0.5208162716789927, 0.7124677748526707], [0.02179175528748655, 0.7161058636720499]], [[0.5207478017837628, 0.7096719207974521], [0.361736143751445, 0.7135509196258443]], [[0.5207478017837628, 0.7096719207974521], [0.3590599214724943, 0.7136470435054519]], [[0.17109236036437128, 0.7270525501571347], [0.021839264490663046, 0.7289415781787879]], [[0.5206576097070319, 0.7059890776642718], [0.019420478372691306, 0.7298390714308878]], [[0.5208162716789927, 0.7124677748526707], [0.01956435578529451, 0.7333718260991546]], [[0.361736143751445, 0.7135509196258443], [0.17109236036437128, 0.7270525501571347]]]],
+    Convex: [[0.5208162716789927, 0.7124677748526707], [0.01956435578529451, 0.7333718260991546], [0.01742787412647101, 0.6833145648117155], [0.0, 0.014135431650135422], [0.007042969646841589, 0.01037246169582784], [0.5033680812744374, 0.0]],
+    problem2108: [[[[0.0, 0.0], [0.6518675123326285, 0.41595394736842106], [0.8332122093023255, 0.6932357594936709], [0.11850013065064019, 0.96875]]], [], [[[0.6518675123326285, 0.41595394736842106], [0.8332122093023255, 0.6932357594936709]], [[0.6584810418704814, 0.6751361170370589], [0.703205985918069, 0.7433518369557754]], [[0.6518675123326285, 0.41595394736842106], [0.703205985918069, 0.7433518369557754]], [[0.3844468348385614, 0.8113323348100523], [0.3996673315587888, 0.8603629024156987]], [[0.0, 0.0], [0.6518675123326285, 0.41595394736842106]], [[0.0, 0.0], [0.3996673315587888, 0.8603629024156987]], [[0.0, 0.0], [0.22993176416266053, 0.925794238103039]], [[0.0, 0.0], [0.11850013065064019, 0.96875]], [[0.2081464536768558, 0.885189361945362], [0.22993176416266053, 0.925794238103039]], [[0.6799762489010208, 0.5952101735229207], [0.8332122093023255, 0.6932357594936709]], [[0.17515980907459505, 0.9028873421523348], [0.1569635474928695, 0.9539227438291557]], [[0.6664195513383078, 0.438204478059629], [0.6373200949450761, 0.5319440510973339]], [[0.6373200949450761, 0.5319440510973339], [0.6867343228737055, 0.5472836470034939]], [[0.6551590013815063, 0.4369445708315234], [0.6664195513383078, 0.438204478059629]], [[0.7248408309413901, 0.5275324735605146], [0.6584810418704814, 0.6751361170370589]], [[0.8200677202437092, 0.6731374174603072], [0.815966746459311, 0.682203775903813]], [[0.7248408309413901, 0.5275324735605146], [0.6694514699157552, 0.5280911069146264]], [[0.17515980907459505, 0.9028873421523348], [0.11850013065064019, 0.96875]], [[0.113857429232808, 0.9307954680190628], [0.1569635474928695, 0.9539227438291557]], [[0.663224163022035, 0.4333186276455524], [0.113857429232808, 0.9307954680190628]], [[0.7157969753748852, 0.5137041306203373], [0.6867343228737055, 0.5472836470034939]], [[0.7297278164648631, 0.5350048299316791], [0.6799762489010208, 0.5952101735229207]], [[0.663224163022035, 0.4333186276455524], [0.6551590013815063, 0.4369445708315234]], [[0.8200677202437092, 0.6731374174603072], [0.6584810418704814, 0.6751361170370589]], [[0.7157969753748852, 0.5137041306203373], [0.6694514699157552, 0.5280911069146264]], [[0.7297278164648631, 0.5350048299316791], [0.6867343228737055, 0.5472836470034939]], [[0.8216799756068265, 0.6756026072131044], [0.815966746459311, 0.682203775903813]], [[0.2081464536768558, 0.885189361945362], [0.17515980907459505, 0.9028873421523348]], [[0.8216799756068265, 0.6756026072131044], [0.3844468348385614, 0.8113323348100523]], [[0.8332122093023255, 0.6932357594936709], [0.11850013065064019, 0.96875]]]],
     donut: [[[[0, 1 / 8], [1 / 8, 0], [.25, 0], [3 / 8, 1 / 8], [3 / 8, .25], [.25, 3 / 8], [1 / 8, 3 / 8], [0, .25]]], [[[1 / 8, 1 / 8], [1 / 8, .25], [.25, .25], [.25, 1 / 8]]], [[[3 / 8, 1 / 8], [0, 1 / 8]], [[1 / 8, 3 / 8], [1 / 8, 0]], [[1 / 8, 0], [.25, 0]], [[.25, 3 / 8], [1 / 8, 3 / 8]], [[.25, 0], [3 / 8, 1 / 8]], [[3 / 8, .25], [.25, 3 / 8]], [[0, .25], [3 / 8, .25]], [[3 / 8, .25], [3 / 8, 1 / 8]], [[.25, 0], [.25, 3 / 8]], [[1 / 8, 3 / 8], [0, .25]], [[0, .25], [0, 1 / 8]], [[1 / 8, 0], [0, 1 / 8]]]],
 
     crane: [[[[.16, .72], [1831 / 6745, 4749 / 6745], [49 / 195, 224 / 585], [.35, .35], [224 / 585, 49 / 195], [.84, .28], [448 / 895, 294 / 895], [168 / 295, 441 / 1180], [.7, .7], [441 / 1180, 168 / 295], [294 / 895, 448 / 895], [.3, .7], [277 / 1015, 738 / 1015]]], [], [[[5603 / 14650, 2777 / 7325], [39221 / 111815, 38878 / 111815]], [[112 / 265, 147 / 530], [5603 / 14650, 2777 / 7325]], [[14 / 41, 147 / 410], [.7, .7]], [[.7, .7], [168 / 295, 441 / 1180]], [[.35, .35], [.84, .28]], [[49 / 195, 224 / 585], [.35, .35]], [[147 / 415, 28 / 83], [21 / 58, 10 / 29]], [[39221 / 111815, 38878 / 111815], [.84, .28]], [[.35, .35], [.3, .7]], [[5603 / 14650, 2777 / 7325], [168 / 295, 441 / 1180]], [[.5, 21 / 64], [.5, .5]], [[21 / 58, 10 / 29], [116 / 273, 29 / 104]], [[2777 / 7325, 5603 / 14650], [38878 / 111815, 39221 / 111815]], [[21 / 64, .5], [2777 / 7325, 5603 / 14650]], [[112 / 265, 147 / 530], [147 / 530, 112 / 265]], [[224 / 585, 49 / 195], [.84, .28]], [[28 / 83, 147 / 415], [188 / 635, 447 / 635]], [[116 / 273, 29 / 104], [5603 / 14650, 2777 / 7325]], [[277 / 1015, 738 / 1015], [.3, .7]], [[147 / 410, 14 / 41], [.7, .7]], [[50378 / 168335, 117957 / 168335], [38878 / 111815, 39221 / 111815]], [[5603 / 14650, 2777 / 7325], [.5, 21 / 64]], [[.84, .28], [147 / 415, 28 / 83]], [[10 / 29, 21 / 58], [28 / 83, 147 / 415]], [[.7, .7], [441 / 1180, 168 / 295]], [[168 / 295, 441 / 1180], [224 / 585, 49 / 195]], [[.16, .72], [188 / 635, 447 / 635]], [[.5, .5], [21 / 64, .5]], [[49 / 195, 224 / 585], [441 / 1180, 168 / 295]], [[2777 / 7325, 5603 / 14650], [147 / 530, 112 / 265]], [[441 / 1180, 168 / 295], [2777 / 7325, 5603 / 14650]], [[50378 / 168335, 117957 / 168335], [.16, .72]], [[29 / 104, 116 / 273], [2777 / 7325, 5603 / 14650]], [[224 / 585, 49 / 195], [.35, .35]], [[29 / 104, 116 / 273], [10 / 29, 21 / 58]], [[.16, .72], [277 / 1015, 738 / 1015]], [[.3, .7], [.16, .72]], [[.5, .5], [.35, .35]], [[49 / 195, 224 / 585], [277 / 1015, 738 / 1015]]]]
 };
-
-/**
- * @param {Object} t
- * @param {Object} n
- * @param {number} dataAndEvents
- * @return {undefined}
- */
-function Z(t, n, dataAndEvents) {
-    if (t) {
-        var point = F(n, t);
-        var x = W(R(t, n), [2, 0]);
-        var l;
-        var b;
-        /** @type {number} */
-        x = point[0] * x[0] + point[1] * x[1];
-        if (point[0]) {
-            /** @type {Array} */
-            l = [x / point[0], 0];
-            /** @type {Array} */
-            b = [(x - point[1]) / point[0], 1];
-        } else {
-            if (!point[1]) {
-                return;
-            }
-            /** @type {Array} */
-            l = [0, x / point[1]];
-            /** @type {Array} */
-            b = [1, x / point[1]];
-        }
-        if (L(F(n, t), N(F(l, t)))[1] >= 0) {
-            /** @type {Array} */
-            x = l;
-            /** @type {Array} */
-            l = b;
-            /** @type {Array} */
-            b = x;
-        }
-        x = fold(I.concat().reverse(), [], function (log, dataAndEvents) {
-            var matched = C(dataAndEvents[1], [[], []], function (kv, a, dataAndEvents) {
-                var err = push(kv[0], a);
-                var typePattern = F(b, l);
-                var n = W(F(dataAndEvents[1], a[1]), typePattern);
-                return n[1] != 0 && (n = W(F(a[1], l), typePattern)[1] / -n[1], 0 <= n && n < 1) ? (n = R(a[1], L(F(dataAndEvents[1], a[1]), [n, 0])), n = [R(L(F(dataAndEvents[0], a[0]), W(F(n, a[1]), F(dataAndEvents[1], a[1]))), a[0]), n], [push(kv[1], n), push(err, n)]) : [err, kv[1]];
-            });
-            matched = matched[1].length ? (L(F(b, l), N(F(matched[0][0][1], l)))[1] >= 0 && (matched = matched.reverse()), U(matched, function (e) {
-                return [dataAndEvents[0], C(e, [], function (err, nil, dataAndEvents) {
-                    return nil[1][0] == dataAndEvents[1][0] && (nil[1][1] == dataAndEvents[1][1] && (nil[0][0] == dataAndEvents[0][0] && nil[0][1] == dataAndEvents[0][1])) ? err : push(err, nil);
-                })];
-            })) : L(F(b, l), N(F(dataAndEvents[1][0][1], l)))[1] >= 0 ? [0, dataAndEvents] : [dataAndEvents];
-            if (matched[0]) {
-                log.unshift(matched[0]);
-            }
-            if (matched[1]) {
-                var y = F(b, l);
-                y = W(y, N(y));
-                log = push(log, [!matched[1][0], U(matched[1][1], function (dataAndEvents) {
-                    return [dataAndEvents[0], R(L(N(F(dataAndEvents[1], l)), y), l)];
-                })]);
-            }
-            return log;
-        });
-        if (dataAndEvents) {
-            B(x);
-            var _ctx = $("#dst")[0].getContext("2d");
-            O([t, n], function (dataAndEvents) {
-                /** @type {string} */
-                _ctx.fillStyle = "#000000";
-                _ctx.fillRect(dataAndEvents[0] - 1 / 128, dataAndEvents[1] - 1 / 128, 1 / 64, 1 / 64);
-            });
-        } else {
-            G.push(I);
-            I = x;
-            /** @type {number} */
-            E = 0;
-            B(I);
-        }
-    }
-}
-/**
- * @param {Object} x
- * @return {undefined}
- */
-function B(x) {
-    Q(x, 1);
-    Q(x, 0);
-}
-/**
- * @param {Array} l
- * @param {Array} c
- * @return {?}
- */
-function F(l, c) {
-    return [l[0] - c[0], l[1] - c[1]];
-}
-/**
- * @param {string} d
- * @return {?}
- */
-function T(d) {
-    return $("#origami #" + d + " li.active").data(d + "-id");
-}
-/**
- * @param {Array} protos
- * @return {undefined}
- */
-function Y(protos) {
-    if (protos.length == 0) {
-        $("#flip").click(function () {
-            I = E ? G.pop() : (G.push(I), U(I, function (dataAndEvents) {
-                return [!dataAndEvents[0], U(dataAndEvents[1], function (data) {
-                    return [data[0], S(data[1])];
-                })];
-            }).reverse());
-            /** @type {boolean} */
-            E = !E;
-            B(I);
-        });
-        $("#undo").click(function () {
-            if (G.length >= 1) {
-                I = G.pop();
-            }
-            B(I);
-        });
-        $.map(problems, function (deepDataAndEvents, dataAndEvents) {
-            $("#origami #silhouette-list").append('<li data-silhouette-id="' + dataAndEvents + '"><a href="#">' + dataAndEvents + "</a></li>");
-        });
-        O([0, 1], function (match) {
-            /** @type {string} */
-            var target = "#origami #" + (match ? "silhouette" : "texture");
-            var canvas = $(match ? "#dst" : "#src");
-            /** @type {number} */
-            var h = canvas.height() / 2 + 128;
-            /** @type {number} */
-            var delta = canvas.width() / 2 - 128;
-            /** @type {number} */
-            var color = 0;
-            $(target + " a").click(function (validClass) {
-                validClass.preventDefault();
-                /** @type {string} */
-                validClass = "active";
-                $(target + " li").removeClass(validClass);
-                $(this).parent().addClass(validClass);
-                B(I);
-            });
-            if (match) {
-                /**
-                 * @param {Object} e
-                 * @return {?}
-                 */
-                var move = function (e) {
-                    var x = e.offsetX;
-                    var y = e.offsetY;
-                    var touches = e.originalEvent.changedTouches;
-                    if (touches) {
-                        var nodeOfs = $("#dst")[0].getBoundingClientRect();
-                        /** @type {number} */
-                        x = touches[0].pageX - nodeOfs.left;
-                        /** @type {number} */
-                        y = touches[0].pageY - nodeOfs.top;
-                    }
-                    return [(x - delta) / 256, (h - y) / 256];
-                };
-                var onMouseMove;
-                canvas.mousedown(onMouseMove = function (e) {
-                    $("#navi").remove();
-                    color = move(e);
-                    return false;
-                });
-                canvas.bind("touchstart", onMouseMove);
-                canvas.mousemove(onMouseMove = function (e) {
-                    Z(color, move(e), 1);
-                    return false;
-                });
-                canvas.bind("touchmove", onMouseMove);
-                canvas.mouseup(onMouseMove = function (e) {
-                    Z(color, move(e));
-                    /** @type {number} */
-                    color = 0;
-                    return false;
-                });
-                canvas.bind("touchend", onMouseMove);
-            }
-            canvas[0].getContext("2d").setTransform(256, 0, 0, -256, delta, h);
-        });
-        B(I);
-    } else {
-        /** @type {Image} */
-        var im = new Image;
-        J.push(im);
-        /**
-         * @return {undefined}
-         */
-        im.onload = function () {
-            Y(protos);
-        };
-        /** @type {string} */
-        im.src = "/texture" + protos.shift() + ".png";
-    }
-}
-/**
- * @param {Array} j
- * @return {?}
- */
-function S(j) {
-    return [1 - j[0], j[1]];
-}
-/**
- * @param {Array} a
- * @param {Array} b
- * @return {?}
- */
-function R(a, b) {
-    return [a[0] + b[0], a[1] + b[1]];
-}
-/**
- * @param {Array} l
- * @param {?} value
- * @return {undefined}
- */
-function Q(l, value) {
-    var context = $(value ? "#dst" : "#src")[0].getContext("2d");
-    context.clearRect(-1, -1, 3, 3);
-    context.beginPath();
-    /** @type {number} */
-    context.lineWidth = 0.001;
-    /** @type {string} */
-    context.strokeStyle = "#000000";
-    fold(Array.apply(null, {
-        length: 40
-    }), -10, function (dataAndEvents, d) {
-        context.moveTo(-1, d = dataAndEvents / 10);
-        context.lineTo(3, d);
-        context.moveTo(d, -1);
-        context.lineTo(d, 3);
-        return dataAndEvents + 1;
-    });
-    context.stroke();
-    O(l, function (objectTypes) {
-        context.beginPath();
-        var ab = objectTypes[1];
-        O(ab, function (tagMap) {
-            context.lineTo(tagMap[value][0], tagMap[value][1]);
-        });
-        context.closePath();
-        var texture = T("texture");
-        if (texture) {
-            if (value && objectTypes[0]) {
-                context.save();
-                context.clip();
-                context.translate(ab[0][1][0], ab[0][1][1]);
-                l = S(ab[0][0]);
-                ab = W(F(S(ab[1][0]), l), F(ab[1][1], ab[0][1]));
-                context.rotate(-Math.atan2(ab[1], ab[0]));
-                context.translate(-l[0], -l[1]);
-                context.drawImage(J[texture - 1], 0, 0, 512, 512, 0, 0, 1, 1);
-                context.restore();
-            } else {
-                /** @type {string} */
-                context.fillStyle = "#cccccc";
-                context.fill();
-            }
-        }
-        /** @type {number} */
-        context.lineWidth = 0.003;
-        /** @type {string} */
-        context.strokeStyle = "#000000";
-        context.stroke();
-    });
-    if (value) {
-        var i = T("silhouette");
-        if (i = i ? problems[i] : null) {
-            context.beginPath();
-            O([i[0], i[1]], function (inplace) {
-                O(inplace, function (inplace) {
-                    O(inplace, function (pt) {
-                        context.lineTo(pt[0], pt[1]);
-                    });
-                    context.closePath();
-                });
-            });
-            /** @type {string} */
-            context.fillStyle = "rgba(255,192,192,.8)";
-            context.fill();
-            context.beginPath();
-            O(i[2], function (dataAndEvents) {
-                context.moveTo(dataAndEvents[0][0], dataAndEvents[0][1]);
-                context.lineTo(dataAndEvents[1][0], dataAndEvents[1][1]);
-            });
-            /** @type {number} */
-            context.lineWidth = 0.005;
-            /** @type {string} */
-            context.strokeStyle = "rgba(255,128,128,.8)";
-            context.stroke();
-        }
-    }
-}
-/**
- * @param {?} n
- * @param {Array} m
- * @param {Function} set
- * @return {?}
- */
-function C(n, m, set) {
-    m = fold(n, [m], function (m, val) {
-        return [m[1] ? set(m[0], m[1], val) : m[0], val];
-    });
-    return set(m[0], m[1], n[0]);
-}
-/**
- * @param {Array} a
- * @param {Array} b
- * @return {?}
- */
-function L(a, b) {
-    return [a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]];
-}
-/**
- * @param {Array} v11
- * @param {Array} args
- * @return {?}
- */
-function W(v11, args) {
-    /** @type {number} */
-    var d = args[0] * args[0] + args[1] * args[1];
-    return [(args[0] * v11[0] + args[1] * v11[1]) / d, (args[0] * v11[1] - args[1] * v11[0]) / d];
-}
-/**
- * @param {?} results
- * @param {Function} f
- * @return {?}
- */
-function U(results, f) {
-    return fold(results, [], function (err, x) {
-        return push(err, f(x));
-    });
-}
-/**
- * @param {Array} v11
- * @return {?}
- */
-function N(v11) {
-    return [v11[0], -v11[1]];
-}
-/**
- * @param {Array} data
- * @param {Function} cb
- * @return {undefined}
- */
-function O(data, cb) {
-    fold(data, 0, function (dataAndEvents, outErr) {
-        cb(outErr);
-    });
-}
-/** @type {Array} */
-var I = [[false, [[[0, 0], [0, 0]], [[1, 0], [1, 0]], [[1, 1], [1, 1]], [[0, 1], [0, 1]]]]];
-/** @type {Array} */
-var G = [];
-/** @type {number} */
-var E = 0;
-/** @type {Array} */
-var J = [];
-$(function () {
-    Y([0, 1, 2, 3]);
-});
