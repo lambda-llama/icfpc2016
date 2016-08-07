@@ -4,9 +4,17 @@ open Core_kernel.Std
 
 let n = num_of_int
 
+let zero = n 0
+let one = n 1
+
+let uber_stupid =
+  (
+    [(zero, zero); (one, zero); (one, one); (zero, one)],
+    [[0; 1; 2; 3]],
+    [(zero, zero); (one, zero); (one, one); (zero, one)]
+  )
+
 let at_origin w h =
-  let zero = n 0
-  and one = n 1 in
   let points_before = [
     (zero, zero); (one, zero); (one, one); (zero, one);
     (w, zero); (one, h); (w, one); (zero, h);
@@ -42,12 +50,17 @@ let solve_inner skeleton =
   let w = x_max -/ x_min
   and h = y_max -/ y_min
   in
-  if w <=/ n 1 && h <=/ n 1
-  then
-    let f (x, y) = (x +/ x_min, y +/ y_min) in
-    let (before, facets, after) = at_origin w h in
-    Some (before, facets, List.map after ~f)
-  else None
+  let f (x, y) = (x +/ x_min, y +/ y_min) in
+  let r = if w <=/ n 1 && h <=/ n 1
+    then
+      let (before, facets, after) = at_origin w h in
+      if List.contains_dup before ~compare:Vertex.compare
+      then None
+      else Some (before, facets, after)
+    else None
+  in
+  let (a, b, c) = Option.value r ~default:uber_stupid in
+  (a, b, List.map c ~f)
 
 
 let string_of_solution before facets after =
@@ -65,7 +78,5 @@ let string_of_solution before facets after =
 
 
 let bf_solve skel =
-  match solve_inner skel with
-  | Some (before, facets, after) ->
-    Some (string_of_solution before facets after)
-  | None -> None
+  let (b, f, a) = solve_inner skel in
+  string_of_solution b f a

@@ -11,8 +11,6 @@ let () =
 
     let s = In_channel.read_all in_path in
     let (_shade, skeleton) = Input.problem_of_string s in
-    begin match (Bf.bf_solve skeleton) with
-      | Some data -> Out_channel.write_all out_path ~data
-      | None -> failwith "BB to big"
-    end
+    let data = (Bf.bf_solve skeleton) in
+    Out_channel.write_all out_path ~data:data
   | _other -> prerr_endline "usage: %prog PROBLEM_ID"
