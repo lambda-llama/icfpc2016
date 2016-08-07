@@ -9,11 +9,16 @@ from api import submit_solution
 if __name__ == '__main__':
     try:
         solver = sys.argv[1]
-        [prob_fst, prob_last] = map(int, sys.argv[2:])
+        problems = list(map(int, sys.argv[2:]))
+        if len(problems) == 2:
+            [prob_fst, prob_last] = problems
+            problems_range = range(prob_fst, prob_last + 1)
+        else:
+            problems_range = problems
     except ValueError:
         sys.exit("usage: %prog SOLVER ID_START ID_END")
 
-    for i in range(prob_fst, prob_last + 1):
+    for i in problems_range:
         print("problem {:04d}:".format(i), end=" ")
         if not os.path.exists("problems/problem{}.txt".format(i)):
             print("SKIP problem missing")
