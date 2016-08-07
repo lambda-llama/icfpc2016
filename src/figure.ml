@@ -171,10 +171,12 @@ let to_unit_square (f: t) : (Vertex.t -> Vertex.t) option =
     let is_unit p1 p2 =
       let d = sub p1 p2 in dot d d =/ n 1
     in if is_unit top left && is_unit left bottom &&
-       is_unit bottom right && is_unit right top then
+          is_unit bottom right && is_unit right top
+    then
       let translate = fun (x, y) -> (x -/ fst left, y -/ snd left) in
       let rotate =
         let (cos, nsin) = translate bottom in
+        assert (cos */ cos +/ nsin */ nsin =/ n 1);
         let sin = n 0 -/ nsin in
         mk_rot cos sin
       in Some (Fn.compose rotate translate)
