@@ -94,9 +94,11 @@ and segments {segments=ss; _} = ss
 
 let map {segments=ss; _} ~f = create @@ List.map ~f ss
 
-let reflect {segments=ss; _} s =
+let reflect {segments=ss; area} s =
   let reflected = List.rev_map ss ~f:(fun (a, b) ->
       (Vertex.reflect b s, Vertex.reflect a s))
-  in create reflected
+  in {segments=reflected; area}
 
-and quasi_reflect {segments=ss; _} = create (List.rev_map ss ~f:Segment.twin)
+and quasi_reflect {segments=ss; area} =
+  let reflected = List.rev_map ss ~f:Segment.twin in
+  {segments=reflected; area}

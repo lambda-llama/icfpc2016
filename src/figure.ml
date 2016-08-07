@@ -109,7 +109,6 @@ let vertices f = List.concat_map f ~f:Facet.vertices
 let segments f =
   List.concat_map f ~f:Facet.segments |> List.dedup ~compare:Segment.compare
 
-(** Unfolds a given segment [s] of a figure [f]. *)
 let unfold (dst : t) (src : t) s =
   let mapper = List.zip_exn src dst in
   let targets = List.filter src ~f:(fun target ->
