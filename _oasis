@@ -38,6 +38,12 @@ Executable solver
   MainIs:             solver.ml
   CompiledObject:     best
 
+Executable solver_bf
+  Path:               bin
+  BuildDepends:       origami
+  MainIs:             solver_bf.ml
+  CompiledObject:     best
+
 Executable test_runner
   Path:               bin
   BuildDepends:       origami
