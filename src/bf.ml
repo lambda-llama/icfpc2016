@@ -42,9 +42,12 @@ let solve_inner skeleton =
   let w = x_max -/ x_min
   and h = y_max -/ y_min
   in
-  let f (x, y) = (x +/ x_min, y +/ y_min) in
-  let (before, facets, after) = at_origin w h in
-  (before, facets, List.map after ~f)
+  if w <=/ n 1 && h <=/ n 1
+  then
+    let f (x, y) = (x +/ x_min, y +/ y_min) in
+    let (before, facets, after) = at_origin w h in
+    Some (before, facets, List.map after ~f)
+  else None
 
 
 let string_of_solution before facets after =
@@ -62,5 +65,7 @@ let string_of_solution before facets after =
 
 
 let bf_solve skel =
-  let (before, facets, after) = solve_inner skel in
-  string_of_solution before facets after
+  match solve_inner skel with
+  | Some (before, facets, after) ->
+    Some (string_of_solution before facets after)
+  | None -> None
