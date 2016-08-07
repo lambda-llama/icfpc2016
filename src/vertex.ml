@@ -13,8 +13,8 @@ and of_string s = match String.split_on_chars ~on:[','] s with
 let sexp_of_t = Fn.compose sexp_of_string to_string
 and t_of_sexp = Fn.compose of_string string_of_sexp
 
-let compare = Tuple2.compare ~cmp1:compare_num ~cmp2:compare_num
-and hash = Hashtbl.hash
+let compare v1 v2 = Tuple2.compare ~cmp1:compare_num ~cmp2:compare_num v1 v2
+and hash v = Hashtbl.hash v
 
 let eq (x1, y1) (x2, y2) = eq_num x1 x2 && eq_num y1 y2
 [@@inline]
@@ -39,8 +39,9 @@ module Vertex3 = struct
   let sexp_of_t _ = stub "Vertex3.sexp_of_t"
   and t_of_sexp _ = stub "Vertex3.t_of_sexp"
 
-  let compare = Tuple3.compare ~cmp1:compare ~cmp2:compare ~cmp3:compare
-  and hash = Hashtbl.hash
+  let compare v31 v32 =
+    Tuple3.compare ~cmp1:compare ~cmp2:compare ~cmp3:compare v31 v32
+  and hash v3 = Hashtbl.hash v3
 end
 
 (** Reflects a coordinate agains a line segment [a, b]. *)

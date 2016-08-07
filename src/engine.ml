@@ -25,23 +25,21 @@ let search dst: string =
   | candidates ->
     printf "iter %04d: %d candidates" iter (List.length candidates);
     print_newline ();
-    let solutions =
-      List.filter candidates ~f:(fun (dst, src) -> area src =/ n 1)
-      |> List.filter_map
-        ~f:(fun (dst, src) ->
-            Option.bind (to_unit_square src) (fun tus ->
-                let unit_src = Figure.transform_figure tus src in
-                Option.map (map_src_dst unit_src dst) ~f:(fun m ->
-                    Output.output_solution m unit_src dst)))
+    let solutions = List.filter_map candidates ~f:(fun (dst, src) ->
+        if area src =/ n 1
+        then
+          Option.bind (to_unit_square src) (fun tus ->
+              let unit_src = Figure.transform_figure tus src in
+              Option.map (map_src_dst unit_src dst) ~f:(fun m ->
+                  Output.output_solution m unit_src dst))
+        else None)
     in match solutions with
     | (solution::rest) ->
       printf "iter %04d: %d extra solutions found\n" iter (List.length rest);
       solution
     | _other ->
       let new_candidates = List.concat_map candidates ~f:(fun (dst, src) ->
-          List.concat_map (segments src) ~f:(fun s ->
-              List.filter (unfold dst src s)
-                ~f:(fun (_dst, src) -> area src <=/ n 1)))
+          List.concat_map (segments src) ~f:(unfold dst src))
       in begin
         go (succ iter) (List.dedup ~compare:compare_src new_candidates)
       end

@@ -71,6 +71,7 @@ let split_segments segs =
 module VT = Hashtbl.Make(Vertex)
 
 let of_skeleton (skel: Segment.t list): t =
+  printf "facetting [%s]\n" (String.concat ~sep:"," @@ List.map skel ~f:Segment.show);
   let s = split_segments skel in
   let half_edges = ref (List.concat_map s ~f:(fun (a, b) -> [(a, b); (b, a)])) in
   let segmap = VT.create () in
@@ -109,6 +110,9 @@ let vertices f = List.concat_map f ~f:Facet.vertices
 let segments f =
   List.concat_map f ~f:Facet.segments |> List.dedup ~compare:Segment.compare
 
+let area = List.fold_left ~init:(n 0)
+    ~f:(fun acc f -> acc +/ Facet.area f)
+
 let unfold (dst : t) (src : t) s =
   let mapper = List.zip_exn src dst in
   let targets = List.filter src ~f:(fun target ->
@@ -121,20 +125,20 @@ let unfold (dst : t) (src : t) s =
      in
 
      let step (dst, src) target =
-       let dtarget = List.Assoc.find_exn ~equal:Facet.eq mapper target
-       in (Facet.quasi_reflect dtarget::dst,
-           Facet.reflect target s::src)
-     in
-
-     let base = step (dst, src) target in
-     base::List.map neighbours ~f:(step base)
+       let unfolded = Facet.reflect target s::src in
+       if area unfolded >/ n 1
+       then None
+       else
+         let dtarget = List.Assoc.find_exn ~equal:Facet.eq mapper target
+         in Some (Facet.quasi_reflect dtarget::dst, unfolded)
+     in begin match step (dst, src) target with
+     | Some base -> base::List.filter_map neighbours ~f:(step base)
+     | None      -> []
+     end
   | _other -> []  (* 0 or >1 *)
 
 let transform_facet m = Facet.map ~f:(fun (a, b) -> (m a, m b))
 let transform_figure m t = List.map t ~f:(transform_facet m)
-
-let area = List.fold_left ~init:(n 0)
-    ~f:(fun acc f -> acc +/ Facet.area f)
 
 let is_square_approx (f : t) =
   let vs = vertices f in
