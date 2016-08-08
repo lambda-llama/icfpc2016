@@ -12,8 +12,6 @@ BuildDepends:   core_kernel,
 Library origami
   Path:               src
   BuildDepends:       ppx_deriving.std,
-                      landmarks,
-                      landmarks.ppx
   Modules:            Vertex,
                       Segment,
                       Facet,
