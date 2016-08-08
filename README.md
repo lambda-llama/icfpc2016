@@ -15,3 +15,10 @@ $ ocaml setup.ml -all
 $ cd visualize
 $ python -m http.server
 ```
+
+## Running not finished solution based on convex hull
+```
+$ cd visualize
+$ rm out/* && python to_js.py < problems/problem101.txt
+```
+Afterwards you can see correct folding sequence and not-finished-yet unfolding procedure.
