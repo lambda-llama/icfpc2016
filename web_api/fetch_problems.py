@@ -35,22 +35,27 @@ if __name__ == '__main__':
     problems_old = set([int(os.path.basename(e)
                             .replace('problem', '')
                             .replace('.txt', ''))
-                        for e in glob('../problems/*.txt')])
+                        for e in glob('./problems/*.txt')])
     # TODO: enhance matching via using `spec_hash` and `publish_time`
     problems_todo = set(problems_curr_d.keys()).difference(problems_old)
     problems_todo = sorted(problems_todo)
     print('New problems found: {}'.format(problems_todo))
 
-    with open('recent_problems.txt', 'w') as fo:
+    with open('./web_api/recent_problems.txt', 'w') as fo:
         for idx, problem_todo in enumerate(problems_todo):
             time.sleep(3)
 
-            tmp_filename = '../problems/problem{}.txt'.format(problem_todo)
-            tmp_problem = request_blob(problems_curr_d[problem_todo][1]).text
+            tmp_filename = './problems/problem{}.txt'.format(problem_todo)
+            response = request_blob(problems_curr_d[problem_todo][1])
+            if response.status_code != 200:
+                print('ERROR code {}, problem has not been downloaded'
+                      .format(response.status_code))
+                continue
+            tmp_problem = response.text
             with open(tmp_filename, 'w') as f:
                 f.writelines(tmp_problem)
 
-            tmp_filename = '../problems/problem{}.meta'.format(problem_todo)
+            tmp_filename = './problems/problem{}.meta'.format(problem_todo)
             meta = problems_curr_d[problem_todo]
             with open(tmp_filename, 'w') as f:
                 f.writelines([str(meta[0]), '\n', meta[1], '\n'])
